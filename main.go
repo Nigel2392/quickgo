@@ -153,11 +153,6 @@ func ListConfigs() {
 	}
 }
 
-func DeleteConfig(name string) error {
-	name = name + ".json"
-	return os.Remove(EXE_DIR + "\\conf\\" + name)
-}
-
 func CreateProject(dir Directory, name string) {
 	// create the directory
 	os.Mkdir(name, 0755)
@@ -269,8 +264,8 @@ func PrintLogo() {
 }
 
 func init() {
-	if _, err := os.Stat(EXE_DIR + "\\conf"); os.IsNotExist(err) {
-		os.Mkdir(EXE_DIR+"\\conf", 0755)
+	if _, err := os.Stat(".\\conf"); os.IsNotExist(err) {
+		os.Mkdir(".\\conf", 0755)
 	}
 }
 
@@ -283,12 +278,11 @@ func main() {
 	proj_name := flag.String("n", "", "Name of the project to be created")
 	view_config := flag.Bool("v", false, "View the config of the project")
 	location := flag.Bool("loc", false, "Location of the executable")
-	delete := flag.Bool("del", false, "Delete a config")
 
 	if len(os.Args) == 1 {
 		PrintLogo()
 		flag.CommandLine.Usage()
-		Loading("Exiting", 3)
+		os.Exit(1)
 	}
 
 	flag.Parse()
@@ -304,20 +298,12 @@ func main() {
 		}
 		if *view_config {
 			ListFiles(dir, "")
-			return
-		}
-		if *delete {
-			err := DeleteConfig(*config_name)
+		} else {
+			_, err = ImportJSON(*config_name, *proj_name, *use_dir, dir)
 			if err != nil {
 				log.Fatal(err)
 			}
-			return
 		}
-		_, err = ImportJSON(*config_name, *proj_name, *use_dir, dir)
-		if err != nil {
-			log.Fatal(err)
-		}
-
 	} else if *list_configs {
 		ListConfigs()
 	} else if *get_config != "" {
@@ -325,7 +311,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = WriteJSONConfig(dir, EXE_DIR+"\\conf\\"+*get_config+".json")
+		err = WriteJSONConfig(dir, ".\\conf\\"+*get_config+".json")
 		if err != nil {
 			log.Fatal(err)
 		}
