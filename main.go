@@ -100,20 +100,18 @@ func Loading(s string, l int) {
 func GetDir(name string, project_name string) (Directory, error) {
 	name = name + ".json"
 	file, err := ioutil.ReadFile(EXE_DIR + "\\conf\\" + name)
+	if err != nil {
+		return Directory{}, err
+	}
 	if !*RAW {
 		if project_name == "" {
 			project_name = name
 		}
-		file = bytes.ReplaceAll(file, []byte(" "), []byte("_"))
 		file = bytes.ReplaceAll(file, []byte("$$PROJECT_NAME$$"), []byte(project_name))
 	}
 
-	if err != nil {
-		return Directory{}, err
-	}
-	json_data := string(file)
 	var dir Directory
-	err = json.Unmarshal([]byte(json_data), &dir)
+	err = json.Unmarshal(file, &dir)
 	if err != nil {
 		return Directory{}, err
 	}
