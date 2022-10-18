@@ -277,7 +277,7 @@ func main() {
 	list_configs := flag.Bool("l", false, "List all the available configs")
 	proj_name := flag.String("n", "", "Name of the project to be created")
 	view_config := flag.Bool("v", false, "View the config of the project")
-	location := flag.Bool("loc", false, "Location of the project")
+	location := flag.Bool("loc", false, "Location of the executable")
 
 	if len(os.Args) == 1 {
 		PrintLogo()
