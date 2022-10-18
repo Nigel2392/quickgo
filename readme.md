@@ -16,21 +16,21 @@ go install github.com/Nigel2392/quickgo
 .\quickgo.exe -h
 ```
 
-- **del**
+- **-del**
   - Delete a config
-- **dir string**
+- **-dir**
   - The directory to create the project in
-- **get string**
+- **-get**
   - Get the JSON config of the project
-- **import string**
+- **-import**
   - Path of the JSON file to be imported
-- **l**    
+- **-l**    
   - List all the available configs
-- **loc**
+- **-loc**
   - Location of the executable
-- **n string**
+- **-n**
   - Name of the project to be created
-- **use string**
+- **-use**
   - Path of the JSON file to use for creating templates
-- **v**
+- **-v**
   - View the config of the project
