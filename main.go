@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -96,9 +97,17 @@ func Loading(s string, l int) {
 	fmt.Println()
 }
 
-func GetDir(name string) (Directory, error) {
+func GetDir(name string, project_name string) (Directory, error) {
 	name = name + ".json"
 	file, err := ioutil.ReadFile(EXE_DIR + "\\conf\\" + name)
+	if !*RAW {
+		if project_name == "" {
+			project_name = name
+		}
+		file = bytes.ReplaceAll(file, []byte(" "), []byte("_"))
+		file = bytes.ReplaceAll(file, []byte("$$PROJECT_NAME$$"), []byte(project_name))
+	}
+
 	if err != nil {
 		return Directory{}, err
 	}
@@ -137,11 +146,7 @@ func CreateProject(dir Directory, name string) {
 			log.Fatal(err)
 		}
 		defer f.Close()
-		content := file.Content
-		if !*RAW {
-			content = strings.Replace(content, "$$PROJECT_NAME$$", name, -1)
-		}
-		_, err = f.WriteString(content)
+		_, err = f.WriteString(file.Content)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -304,7 +309,7 @@ func main() {
 			log.Fatal(err)
 		}
 	} else if *config_name != "" {
-		dir, err := GetDir(*config_name)
+		dir, err := GetDir(*config_name, *proj_name)
 		if err != nil {
 			log.Fatal(err)
 		}
