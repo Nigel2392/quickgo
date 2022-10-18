@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"embed"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -42,6 +43,9 @@ func GetExeDIR() string {
 var WORKING_DIR, _ = os.Getwd()
 var EXE_DIR = GetExeDIR()
 
+//go:embed conf/*
+var ConfFS embed.FS
+
 var RAW *bool
 
 func PrintLocation() {
@@ -64,14 +68,21 @@ type Directory struct {
 	Files    []File      `json:"files"`
 }
 
-func ImportJSONConfig(path string) (Directory, error) {
+func FileToDir(file []byte) (Directory, error) {
+	var dir Directory
+	err := json.Unmarshal(file, &dir)
+	if err != nil {
+		return Directory{}, err
+	}
+	return dir, nil
+}
+
+func InitProjectConfig(path string) (Directory, error) {
 	file, err := ioutil.ReadFile(path)
 	if err != nil {
 		return Directory{}, err
 	}
-	json_data := string(file)
-	var dir Directory
-	err = json.Unmarshal([]byte(json_data), &dir)
+	dir, err := FileToDir(file)
 	if err != nil {
 		return Directory{}, err
 	}
@@ -118,7 +129,7 @@ func GetDir(name string, project_name string) (Directory, error) {
 	return dir, nil
 }
 
-func ImportJSON(name string, proj_name string, dir Directory) (Directory, error) {
+func InitProject(name string, proj_name string, dir Directory) (Directory, error) {
 	Loading("Creating project from "+dir.Name, 3)
 	if proj_name == "" {
 		proj_name = dir.Name
@@ -283,6 +294,39 @@ func init() {
 	}
 }
 
+func InitLocalProject(conf_name string, project_name string) {
+	conf, err := ConfFS.ReadFile("conf/" + conf_name + ".json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	dir, err := FileToDir(conf)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if project_name == "" {
+		project_name = conf_name
+	}
+	_, err = InitProject(conf_name, project_name, dir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+}
+
+func ListInternalConfigs() []string {
+	files, err := ConfFS.ReadDir("conf")
+	if err != nil {
+		log.Fatal(err)
+	}
+	var namelist []string
+	for _, f := range files {
+		fname := strings.Split(f.Name(), ".")
+		namelist = append(namelist, fname[0])
+		fmt.Println(Craft(CMD_Purple, fname[0]))
+	}
+	return namelist
+}
+
 func main() {
 	importpath := flag.String("import", "", "Path of the JSON file to be imported")
 	get_config := flag.String("get", "", "Get the JSON config of the project")
@@ -293,6 +337,7 @@ func main() {
 	location := flag.Bool("loc", false, "Location of the executable")
 	del_conf := flag.Bool("del", false, "Delete a config")
 	RAW = flag.Bool("raw", false, "Output raw project from json")
+	embedded_conf := flag.String("d", "", "Use a default configuration file")
 
 	if len(os.Args) == 1 {
 		PrintLogo()
@@ -302,11 +347,11 @@ func main() {
 
 	flag.Parse()
 	if *importpath != "" {
-		_, err := ImportJSONConfig(*importpath)
+		_, err := InitProjectConfig(*importpath)
 		if err != nil {
 			log.Fatal(err)
 		}
-	} else if *config_name != "" {
+	} else if *config_name != "" && *embedded_conf == "" {
 		dir, err := GetDir(*config_name, *proj_name)
 		if err != nil {
 			log.Fatal(err)
@@ -321,11 +366,12 @@ func main() {
 			}
 			return
 		}
-		_, err = ImportJSON(*config_name, *proj_name, dir)
+		_, err = InitProject(*config_name, *proj_name, dir)
 		if err != nil {
 			log.Fatal(err)
 		}
 	} else if *list_configs {
+		ListInternalConfigs()
 		ListConfigs()
 	} else if *get_config != "" {
 		dir, err := GetConfFromDir(*get_config)
@@ -336,7 +382,13 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-	} else if *location {
+	} else if *location && *embedded_conf == "" {
 		PrintLocation()
+	} else if *embedded_conf != "" {
+		InitLocalProject(*embedded_conf, *proj_name)
+	} else {
+		PrintLogo()
+		flag.CommandLine.Usage()
+		os.Exit(1)
 	}
 }
