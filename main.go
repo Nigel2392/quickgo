@@ -295,16 +295,6 @@ func main() {
 			log.Fatal(err)
 		}
 	} else if *config_name != "" {
-		var flag = false
-		for _, fn := range ListConfigs() {
-			if strings.EqualFold(fn, *config_name) {
-				flag = true
-			}
-		}
-		if !flag {
-			log.Fatal("The config file does not exist")
-			ListConfigs()
-		}
 		dir, err := GetDir(*config_name)
 		if err != nil {
 			log.Fatal(err)
