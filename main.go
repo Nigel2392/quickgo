@@ -121,7 +121,7 @@ func ImportJSON(name string, proj_name string, dir Directory) (Directory, error)
 	}
 	os.Mkdir(path+"\\"+proj_name, 0755)
 	os.Chdir(path + "\\" + proj_name)
-	CreateProject(dir, dir.Name)
+	CreateProject(dir, proj_name)
 	return dir, nil
 }
 
