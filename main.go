@@ -179,6 +179,11 @@ func CreateProject(dir Directory, name string) {
 	os.Chdir("..")
 }
 
+func DeleteConfig(name string) error {
+	name = name + ".json"
+	return os.Remove(EXE_DIR + "\\conf\\" + name)
+}
+
 func GetConfFromDir(path string) (Directory, error) {
 	var dir Directory
 	dir.Name = filepath.Base(path)
@@ -281,6 +286,7 @@ func main() {
 	proj_name := flag.String("n", "", "Name of the project to be created")
 	view_config := flag.Bool("v", false, "View the config of the project")
 	location := flag.Bool("loc", false, "Location of the executable")
+	del_conf := flag.Bool("del", false, "Delete a config")
 
 	if len(os.Args) == 1 {
 		PrintLogo()
@@ -301,11 +307,17 @@ func main() {
 		}
 		if *view_config {
 			ListFiles(dir, "")
-		} else {
-			_, err = ImportJSON(*config_name, *proj_name, *use_dir, dir)
+			return
+		} else if *del_conf {
+			err := DeleteConfig(*config_name)
 			if err != nil {
 				log.Fatal(err)
 			}
+			return
+		}
+		_, err = ImportJSON(*config_name, *proj_name, *use_dir, dir)
+		if err != nil {
+			log.Fatal(err)
 		}
 	} else if *list_configs {
 		ListConfigs()
