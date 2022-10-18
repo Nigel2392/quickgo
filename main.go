@@ -138,19 +138,22 @@ func ListFiles(dir Directory, indent string) {
 	}
 }
 
-func ListConfigs() {
+func ListConfigs() []string {
 	files, err := ioutil.ReadDir(EXE_DIR + "\\conf\\")
 	if err != nil {
 		log.Fatal(err)
 	}
+	var filenames []string
 	for _, f := range files {
 		name := f.Name()
 		name_ext := strings.Split(name, ".")
 		if len(name) > 1 {
 			name = name_ext[0]
+			filenames = append(filenames, name)
 		}
 		fmt.Println(Craft(CMD_Blue, name))
 	}
+	return filenames
 }
 
 func CreateProject(dir Directory, name string) {
@@ -264,8 +267,8 @@ func PrintLogo() {
 }
 
 func init() {
-	if _, err := os.Stat(".\\conf"); os.IsNotExist(err) {
-		os.Mkdir(".\\conf", 0755)
+	if _, err := os.Stat(EXE_DIR + "\\conf"); os.IsNotExist(err) {
+		os.Mkdir(EXE_DIR+"\\conf", 0755)
 	}
 }
 
@@ -292,6 +295,16 @@ func main() {
 			log.Fatal(err)
 		}
 	} else if *config_name != "" {
+		var flag = false
+		for _, fn := range ListConfigs() {
+			if strings.EqualFold(fn, *config_name) {
+				flag = true
+			}
+		}
+		if !flag {
+			log.Fatal("The config file does not exist")
+			ListConfigs()
+		}
 		dir, err := GetDir(*config_name)
 		if err != nil {
 			log.Fatal(err)
@@ -311,7 +324,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = WriteJSONConfig(dir, ".\\conf\\"+*get_config+".json")
+		err = WriteJSONConfig(dir, EXE_DIR+"\\conf\\"+*get_config+".json")
 		if err != nil {
 			log.Fatal(err)
 		}
