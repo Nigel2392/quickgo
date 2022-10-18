@@ -112,7 +112,10 @@ func GetDir(name string, project_name string) (Directory, error) {
 	name = name + ".json"
 	file, err := ioutil.ReadFile(EXE_DIR + "\\conf\\" + name)
 	if err != nil {
-		return Directory{}, err
+		file, err = ConfFS.ReadFile("conf/" + name)
+		if err != nil {
+			return Directory{}, err
+		}
 	}
 	if !*RAW {
 		if project_name == "" {
@@ -337,7 +340,6 @@ func main() {
 	location := flag.Bool("loc", false, "Location of the executable")
 	del_conf := flag.Bool("del", false, "Delete a config")
 	RAW = flag.Bool("raw", false, "Output raw project from json")
-	embedded_conf := flag.String("d", "", "Use a default configuration file")
 
 	if len(os.Args) == 1 {
 		PrintLogo()
@@ -351,7 +353,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-	} else if *config_name != "" && *embedded_conf == "" {
+	} else if *config_name != "" {
 		dir, err := GetDir(*config_name, *proj_name)
 		if err != nil {
 			log.Fatal(err)
@@ -382,10 +384,8 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-	} else if *location && *embedded_conf == "" {
+	} else if *location {
 		PrintLocation()
-	} else if *embedded_conf != "" {
-		InitLocalProject(*embedded_conf, *proj_name)
 	} else {
 		PrintLogo()
 		flag.CommandLine.Usage()

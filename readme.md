@@ -7,6 +7,10 @@
 * List all your imported templates with `quickgo -l`.
 * Define a name for each project, display it by using `$$PROJECT_NAME$$` in your templates, then use the template.
 
+## Information:
+When using `-l`, the default embedded configs are highlighted in purple. 
+These default configs are only available via the "-d (template name)" argument.
+
 ## Installation:
 ```
 go install github.com/Nigel2392/quickgo
