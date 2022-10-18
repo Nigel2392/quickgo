@@ -41,6 +41,8 @@ func GetExeDIR() string {
 var WORKING_DIR, _ = os.Getwd()
 var EXE_DIR = GetExeDIR()
 
+var RAW *bool
+
 func PrintLocation() {
 	fmt.Println(Craft(CMD_Bold, Craft(CMD_Blue, "Current location: "+WORKING_DIR)))
 	fmt.Println(Craft(CMD_Bold, Craft(CMD_Blue, "Executable location: "+EXE_DIR)))
@@ -120,7 +122,7 @@ func ImportJSON(name string, proj_name string, dir Directory) (Directory, error)
 		return Directory{}, err
 	}
 	os.Mkdir(path+"\\"+proj_name, 0755)
-	os.Chdir(path + "\\" + proj_name)
+	// os.Chdir(path + "\\" + proj_name)
 	CreateProject(dir, proj_name)
 	return dir, nil
 }
@@ -130,13 +132,15 @@ func CreateProject(dir Directory, name string) {
 	os.Mkdir(name, 0755)
 	// create the files
 	for _, file := range dir.Files {
-		f, err := os.Create(dir.Name + "\\" + file.Name)
+		f, err := os.Create(name + "\\" + file.Name)
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer f.Close()
 		content := file.Content
-		content = strings.Replace(content, "$$PROJECT_NAME$$", name, -1)
+		if *RAW {
+			content = strings.Replace(content, "$$PROJECT_NAME$$", name, -1)
+		}
 		_, err = f.WriteString(content)
 		if err != nil {
 			log.Fatal(err)
@@ -285,6 +289,7 @@ func main() {
 	view_config := flag.Bool("v", false, "View the config of the project")
 	location := flag.Bool("loc", false, "Location of the executable")
 	del_conf := flag.Bool("del", false, "Delete a config")
+	RAW = flag.Bool("raw", false, "Output raw project from json")
 
 	if len(os.Args) == 1 {
 		PrintLogo()
