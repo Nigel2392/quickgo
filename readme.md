@@ -5,7 +5,7 @@
 * Share your templates, and import them with `quickgo -import (filename.json)`.
 * View your imported templates with `quickgo -v (name of project)`.
 * List all your imported templates with `quickgo -l`.
-* Define a name for each project, display it by using \$\$PROJECT_NAME\$\$ in your templates, then use the template.
+* Define a name for each project, display it by using `$$PROJECT_NAME$$` in your templates, then use the template.
 
 ## Installation:
 ```
