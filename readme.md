@@ -33,4 +33,4 @@ go install github.com/Nigel2392/quickgo
 - **-v**
   - View the config of the project (usage: quickgo -use (config name) -v)
 - **-raw**
-  - Write the raw config as a project, will not replace $$PROJECT_NAME$$
+  - Write the raw config as a project, will not replace `$$PROJECT_NAME$$`
