@@ -41,6 +41,11 @@ func GetExeDIR() string {
 var WORKING_DIR, _ = os.Getwd()
 var EXE_DIR = GetExeDIR()
 
+func PrintLocation() {
+	fmt.Println(Craft(CMD_Bold, Craft(CMD_Blue, "Current location: "+WORKING_DIR)))
+	fmt.Println(Craft(CMD_Bold, Craft(CMD_Blue, "Executable location: "+EXE_DIR)))
+}
+
 func Craft(color, s any) string {
 	return fmt.Sprintf("%s%v%s", color, s, CMD_Reset)
 }
@@ -272,6 +277,7 @@ func main() {
 	list_configs := flag.Bool("l", false, "List all the available configs")
 	proj_name := flag.String("n", "", "Name of the project to be created")
 	view_config := flag.Bool("v", false, "View the config of the project")
+	location := flag.Bool("loc", false, "Location of the project")
 
 	if len(os.Args) == 1 {
 		PrintLogo()
@@ -309,5 +315,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+	} else if *location {
+		PrintLocation()
 	}
 }
