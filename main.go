@@ -109,23 +109,45 @@ func GetDir(name string) (Directory, error) {
 	return dir, nil
 }
 
-func ImportJSON(name string, proj_name string, dir_to_use string, dir Directory) (Directory, error) {
+func ImportJSON(name string, proj_name string, dir Directory) (Directory, error) {
 	Loading("Creating project from "+dir.Name, 3)
 	if proj_name == "" {
-		proj_name = name
+		proj_name = dir.Name
 	}
 	// write file to current directory
 	path, err := os.Getwd()
 	if err != nil {
 		return Directory{}, err
 	}
-	if dir_to_use != "" {
-		path = dir_to_use
-	}
 	os.Mkdir(path+"\\"+proj_name, 0755)
 	os.Chdir(path + "\\" + proj_name)
 	CreateProject(dir, dir.Name)
 	return dir, nil
+}
+
+func CreateProject(dir Directory, name string) {
+	// create the directory
+	os.Mkdir(name, 0755)
+	// create the files
+	for _, file := range dir.Files {
+		f, err := os.Create(dir.Name + "\\" + file.Name)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+		content := file.Content
+		content = strings.Replace(content, "$$PROJECT_NAME$$", name, -1)
+		_, err = f.WriteString(content)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	os.Chdir(".\\" + name)
+	// create the children directories
+	for _, child := range dir.Children {
+		CreateProject(child, child.Name)
+	}
+	os.Chdir("..")
 }
 
 func ListFiles(dir Directory, indent string) {
@@ -154,29 +176,6 @@ func ListConfigs() []string {
 		fmt.Println(Craft(CMD_Blue, name))
 	}
 	return filenames
-}
-
-func CreateProject(dir Directory, name string) {
-	// create the directory
-	os.Mkdir(name, 0755)
-	// create the files
-	for _, file := range dir.Files {
-		f, err := os.Create(dir.Name + "\\" + file.Name)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer f.Close()
-		_, err = f.WriteString(file.Content)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	os.Chdir(".\\" + name)
-	// create the children directories
-	for _, child := range dir.Children {
-		CreateProject(child, child.Name)
-	}
-	os.Chdir("..")
 }
 
 func DeleteConfig(name string) error {
@@ -280,7 +279,6 @@ func init() {
 func main() {
 	importpath := flag.String("import", "", "Path of the JSON file to be imported")
 	get_config := flag.String("get", "", "Get the JSON config of the project")
-	use_dir := flag.String("dir", "", "The directory to create the project in")
 	config_name := flag.String("use", "", "Path of the JSON file to use for creating templates")
 	list_configs := flag.Bool("l", false, "List all the available configs")
 	proj_name := flag.String("n", "", "Name of the project to be created")
@@ -315,7 +313,7 @@ func main() {
 			}
 			return
 		}
-		_, err = ImportJSON(*config_name, *proj_name, *use_dir, dir)
+		_, err = ImportJSON(*config_name, *proj_name, dir)
 		if err != nil {
 			log.Fatal(err)
 		}
