@@ -138,7 +138,7 @@ func CreateProject(dir Directory, name string) {
 		}
 		defer f.Close()
 		content := file.Content
-		if *RAW {
+		if !*RAW {
 			content = strings.Replace(content, "$$PROJECT_NAME$$", name, -1)
 		}
 		_, err = f.WriteString(content)
