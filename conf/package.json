@@ -16,7 +16,7 @@
     },
     {
       "name": "go.mod",
-      "content": "module github.com/User/$$PROJECT_NAME$$\r\n\r\ngo 1.18\r\n"
+      "content": "module $$PROJECT_NAME$$\r\n\r\ngo 1.18\r\n"
     }
   ]
 }
