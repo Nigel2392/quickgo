@@ -32,6 +32,9 @@ go install github.com/Nigel2392/quickgo
   - Location of the executable (usage: quickgo -loc (path))
 - **-n**
   - Name of the project to be created (usage: quickgo -use (config name) (optional: -n (name of project))
+    - Replaces the `$$PROJECT_NAME$$` in the template with the name of the project.
+    - Replaces the `$$PROJECT_NAME; OMITURL$$` in the template with the name of the project, assuming the name is the last part of the URL passsed into -n
+      - This is useful when creating Golang packages
 - **-use**
   - Path of the JSON file to use for creating templates (usage: quickgo -use (config name))
 - **-v**

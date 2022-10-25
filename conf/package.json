@@ -11,8 +11,8 @@
       "content": "# This is $$PROJECT_NAME$$!\r\n\r\n## Installation\r\nEasily install $$PROJECT_NAME$$ with the following command:\r\n```\r\n\r\n```\r\n\r\n## Usage\r\n\r\n## Contributing\r\n"
     },
     {
-      "name": "base.go",
-      "content": "package $$PROJECT_NAME$$\r\n\r\nimport (\r\n\r\n)\r\n"
+      "name": "$$PROJECT_NAME; OMITURL$$.go",
+      "content": "package $$PROJECT_NAME; OMITURL$$\r\n\r\nimport (\r\n\r\n)\r\n"
     },
     {
       "name": "go.mod",

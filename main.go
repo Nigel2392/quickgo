@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -122,7 +123,18 @@ func GetDir(name string, project_name string) (Directory, error) {
 		if project_name == "" {
 			project_name = name
 		}
-		file = bytes.ReplaceAll(file, []byte("$$PROJECT_NAME$$"), []byte(project_name))
+		var project_name_urlomitted = project_name
+		if strings.Contains(project_name, "/") {
+			proj_vars := strings.Split(project_name, "/")
+			project_name_urlomitted = proj_vars[len(proj_vars)-1]
+		}
+		if strings.Contains(project_name, "\\") {
+			proj_vars := strings.Split(project_name, "\\")
+			project_name_urlomitted = proj_vars[len(proj_vars)-1]
+		}
+		file = bytes.Replace(file, []byte("$$PROJECT_NAME$$"), []byte(project_name), -1)
+		var re = regexp.MustCompile(`\$\$PROJECT_NAME\s*;\s*OMITURL\$\$`)
+		file = re.ReplaceAll(file, []byte(project_name_urlomitted))
 	}
 
 	var dir Directory
@@ -137,6 +149,10 @@ func InitProject(name string, proj_name string, dir Directory) (Directory, error
 	Loading("Creating project from "+dir.Name, 3)
 	if proj_name == "" {
 		proj_name = dir.Name
+	}
+	if strings.Contains(proj_name, "/") {
+		proj_vars := strings.Split(proj_name, "/")
+		proj_name = proj_vars[len(proj_vars)-1]
 	}
 	// write file to current directory
 	path, err := os.Getwd()
