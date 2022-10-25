@@ -8,7 +8,7 @@
     },
     {
       "name": "README.md",
-      "content": "# This is $$PROJECT_NAME$$!\r\n\r\n## Installation\r\nEasily install $$PROJECT_NAME$$ with the following command:\r\n```\r\n\r\n```\r\n\r\n## Usage\r\n\r\n## Contributing\r\n"
+      "content": "# This is $$PROJECT_NAME$$!\r\n\r\n## Installation\r\nEasily install $$PROJECT_NAME$$ with the following command:\r\n```\r\ngo get $$PROJECT_NAME$$\r\n```\r\n\r\n## Usage\r\n\r\n## Contributing\r\n"
     },
     {
       "name": "$$PROJECT_NAME; OMITURL$$.go",
