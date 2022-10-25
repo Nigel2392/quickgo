@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"embed"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -330,7 +331,16 @@ func ListInternalConfigs() []string {
 	return namelist
 }
 
+func ErrIfExists[T comparable](val T, errStr string) error {
+	if val != *new(T) {
+		fmt.Println(Craft(CMD_Red, errStr))
+		return errors.New(errStr)
+	}
+	return nil
+}
+
 func main() {
+
 	importpath := flag.String("import", "", "Path of the JSON file to be imported")
 	get_config := flag.String("get", "", "Get the JSON config of the project")
 	config_name := flag.String("use", "", "Path of the JSON file to use for creating templates")
@@ -380,7 +390,10 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = WriteJSONConfig(dir, EXE_DIR+"\\conf\\"+*get_config+".json")
+		if *proj_name == "" {
+			*proj_name = *get_config
+		}
+		err = WriteJSONConfig(dir, EXE_DIR+"\\conf\\"+*proj_name+".json")
 		if err != nil {
 			log.Fatal(err)
 		}
