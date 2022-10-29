@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"html"
 	"net/http"
+	"os/exec"
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -104,7 +106,12 @@ func (v *Viewer) http_TraverseDir(dir Directory, path []string) (Directory, File
 
 func (v *Viewer) serve() error {
 	http.HandleFunc("/", v.http_DirBrowser)
-	fmt.Println(Craft(CMD_BRIGHT_Blue, "Serving on port http://localhost:8000"))
+	fmt.Println(Craft(CMD_BRIGHT_Blue, "Serving on http://localhost:8000"))
+	// Open browser to localhost:8000
+	err := OpenBrowser("http://localhost:8000")
+	if err != nil {
+		fmt.Println(Craft(CMD_BRIGHT_Red, "Error opening browser: "+err.Error()))
+	}
 	return http.ListenAndServe("127.0.0.1:8000", nil)
 }
 
@@ -117,7 +124,9 @@ func GetDirs(str_dirs []string) []Directory {
 	for _, dir := range str_dirs {
 		go func(dirname string, wg *sync.WaitGroup, mu *sync.Mutex) {
 			defer wg.Done()
-			dir, err := GetDir(dirname, "")
+			proj_name := strings.SplitN(dirname, ".", 2)[0]
+			proj_name = strings.ToUpper(proj_name)
+			dir, err := GetDir(dirname, proj_name)
 			if err != nil {
 				fmt.Println(err)
 				return
@@ -130,4 +139,19 @@ func GetDirs(str_dirs []string) []Directory {
 	wg.Wait()
 
 	return dirs
+}
+
+func OpenBrowser(url string) error {
+	var err error
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "windows":
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	default:
+		err = fmt.Errorf("unsupported platform")
+	}
+	return err
 }
