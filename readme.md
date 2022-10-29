@@ -19,7 +19,7 @@ go install github.com/Nigel2392/quickgo
 ```
 .\quickgo.exe -h
 ```
-- **serve**
+- **-serve**
   - Serve the project files in the browser.
 - **-del**
   - Delete a config (usage: quickgo -use (config name) -del)
