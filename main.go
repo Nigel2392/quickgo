@@ -19,18 +19,26 @@ import (
 )
 
 var (
-	CMD_Bold      = "\033[1m"
-	CMD_Black     = "\033[30m"
-	CMD_Blue      = "\033[34m"
-	CMD_Cyan      = "\033[36m"
-	CMD_Gray      = "\033[37m"
-	CMD_Green     = "\033[32m"
-	CMD_Purple    = "\033[35m"
-	CMD_Underline = "\033[4m"
-	CMD_Red       = "\033[31m"
-	CMD_Reset     = "\033[0m"
-	CMD_White     = "\033[97m"
-	CMD_Yellow    = "\033[33m"
+	CMD_Bold             = "\033[1m"
+	CMD_Black            = "\033[30m"
+	CMD_BRIGHT_Blue      = "\033[34;m"
+	CMD_Blue             = "\033[34m"
+	CMD_BRIGHT_Cyan      = "\033[36;m"
+	CMD_Cyan             = "\033[36m"
+	CMD_BRIGHT_Gray      = "\033[37;m"
+	CMD_Gray             = "\033[37m"
+	CMD_BRIGHT_Green     = "\033[32;m"
+	CMD_Green            = "\033[32m"
+	CMD_BRIGHT_Purple    = "\033[35;m"
+	CMD_Purple           = "\033[35m"
+	CMD_BRIGHT_Underline = "\033[4;m"
+	CMD_Underline        = "\033[4m"
+	CMD_BRIGHT_Red       = "\033[31;m"
+	CMD_Red              = "\033[31m"
+	CMD_Reset            = "\033[0m"
+	CMD_White            = "\033[97m"
+	CMD_BRIGHT_Yellow    = "\033[33;m"
+	CMD_Yellow           = "\033[33m"
 )
 
 func GetExeDIR() string {
@@ -212,7 +220,6 @@ func ListConfigs() []string {
 			name = name_ext[0]
 			filenames = append(filenames, name)
 		}
-		fmt.Println(Craft(CMD_Blue, name))
 	}
 	return filenames
 }
@@ -343,7 +350,6 @@ func ListInternalConfigs() []string {
 	for _, f := range files {
 		fname := strings.Split(f.Name(), ".")
 		namelist = append(namelist, fname[0])
-		fmt.Println(Craft(CMD_Purple, fname[0]))
 	}
 	return namelist
 }
@@ -367,6 +373,7 @@ func main() {
 	location := flag.Bool("loc", false, "Location of the executable")
 	del_conf := flag.Bool("del", false, "Delete a config")
 	RAW = flag.Bool("raw", false, "Output raw project from json")
+	serve := flag.Bool("serve", false, "Serve the project files over http to preview")
 
 	if len(os.Args) == 1 {
 		PrintLogo()
@@ -378,6 +385,13 @@ func main() {
 	if *importpath != "" {
 		_, err := InitProjectConfig(*importpath)
 		if err != nil {
+			log.Fatal(err)
+		}
+	} else if *serve {
+		dirnames := ListInternalConfigs()
+		dirnames = append(dirnames, ListConfigs()...)
+		viewer := NewViewer(dirnames)
+		if err := viewer.serve(); err != nil {
 			log.Fatal(err)
 		}
 	} else if *config_name != "" {
@@ -400,8 +414,9 @@ func main() {
 			log.Fatal(err)
 		}
 	} else if *list_configs {
-		ListInternalConfigs()
-		ListConfigs()
+		fmt.Println(Craft(CMD_Blue, ListInternalConfigs()))
+		fmt.Println(Craft(CMD_Blue, ListConfigs()))
+
 	} else if *get_config != "" {
 		dir, err := GetConfFromDir(*get_config)
 		if err != nil {
