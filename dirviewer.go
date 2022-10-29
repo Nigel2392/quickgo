@@ -38,8 +38,9 @@ func (v *Viewer) http_DirBrowser(w http.ResponseWriter, r *http.Request) {
 	}
 	var url string = r.URL.Path
 	if url == "/" {
+		fmt.Fprint(w, "<h1 style=\"color:#9200ff;font-style: helvetica;\">Templates: </h1>")
 		for _, dir := range v.Dirs {
-			fmt.Fprintf(w, "<a href='%s/' style=\"font-size:1.5em;font-weight:bold;text-decoration:none;\">%s</a><br>", dir.Name, dir.Name)
+			fmt.Fprintf(w, "<a href='%s/' style=\"font-size:1.5em;font-weight:bold;text-decoration:none;color:#ab22ff;\">%s</a><br>", dir.Name, dir.Name)
 		}
 		return
 	} else {
