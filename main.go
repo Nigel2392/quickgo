@@ -7,7 +7,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -88,7 +87,7 @@ func FileToDir(file []byte) (Directory, error) {
 }
 
 func InitProjectConfig(path string) (Directory, error) {
-	file, err := ioutil.ReadFile(path)
+	file, err := os.ReadFile(path)
 	if err != nil {
 		return Directory{}, err
 	}
@@ -97,7 +96,7 @@ func InitProjectConfig(path string) (Directory, error) {
 		return Directory{}, err
 	}
 	// write file to current directory
-	err = ioutil.WriteFile(EXE_DIR+"\\conf\\", file, 0644)
+	err = os.WriteFile(EXE_DIR+"\\conf\\", file, 0644)
 	if err != nil {
 		return Directory{}, err
 	}
@@ -120,7 +119,7 @@ func Loading(s string, l int) {
 
 func GetDir(name string, project_name string) (Directory, error) {
 	name = name + ".json"
-	file, err := ioutil.ReadFile(EXE_DIR + "\\conf\\" + name)
+	file, err := os.ReadFile(EXE_DIR + "\\conf\\" + name)
 	if err != nil {
 		file, err = ConfFS.ReadFile("conf/" + name)
 		if err != nil {
@@ -208,7 +207,7 @@ func ListFiles(dir Directory, indent string) {
 }
 
 func ListConfigs() []string {
-	files, err := ioutil.ReadDir(EXE_DIR + "\\conf\\")
+	files, err := os.ReadDir(EXE_DIR + "\\conf\\")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -232,7 +231,7 @@ func DeleteConfig(name string) error {
 func GetConfFromDir(path string) (Directory, error) {
 	var dir Directory
 	dir.Name = filepath.Base(path)
-	files, err := ioutil.ReadDir(path)
+	files, err := os.ReadDir(path)
 	if err != nil {
 		return Directory{}, err
 	}
@@ -244,7 +243,7 @@ func GetConfFromDir(path string) (Directory, error) {
 			}
 			dir.Children = append(dir.Children, child)
 		} else {
-			file, err := ioutil.ReadFile(path + "\\" + f.Name())
+			file, err := os.ReadFile(path + "\\" + f.Name())
 			if err != nil {
 				return Directory{}, err
 			}
@@ -263,7 +262,7 @@ func WriteJSONConfig(dir Directory, path string) error {
 	// Check if the file exists
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		// Create the file
-		err = ioutil.WriteFile(path, json_data, 0644)
+		err = os.WriteFile(path, json_data, 0644)
 		if err != nil {
 			return err
 		}
@@ -271,7 +270,7 @@ func WriteJSONConfig(dir Directory, path string) error {
 		// Delete the file
 		answer := RepeatAsk("The file already exists, do you want to overwrite it? (y/n): ", []string{"y", "n"})
 		if answer == "y" {
-			err := ioutil.WriteFile(path, json_data, 0644)
+			err := os.WriteFile(path, json_data, 0644)
 			if err != nil {
 				return err
 			}
@@ -279,7 +278,7 @@ func WriteJSONConfig(dir Directory, path string) error {
 			answer = RepeatAsk("Do you want to change the name of the file? (y/n): ", []string{"y", "n"})
 			if answer == "y" {
 				name := typeutils.Ask("Enter the name of the file: ")
-				err = ioutil.WriteFile(EXE_DIR+"\\conf\\"+name+"json", json_data, 0644)
+				err = os.WriteFile(EXE_DIR+"\\conf\\"+name+"json", json_data, 0644)
 				if err != nil {
 					return err
 				}
