@@ -118,7 +118,7 @@ func (v *Viewer) serve() error {
 func GetDirs(str_dirs []string) []Directory {
 	var dirs []Directory
 	var wg sync.WaitGroup
-	var murw sync.Mutex
+	var out_mu sync.Mutex
 
 	wg.Add(len(str_dirs))
 	for _, dir := range str_dirs {
@@ -131,10 +131,10 @@ func GetDirs(str_dirs []string) []Directory {
 				fmt.Println(err)
 				return
 			}
-			murw.Lock()
+			mu.Lock()
 			dirs = append(dirs, dir)
-			murw.Unlock()
-		}(dir, &wg, &murw)
+			mu.Unlock()
+		}(dir, &wg, &out_mu)
 	}
 	wg.Wait()
 
