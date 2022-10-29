@@ -2,10 +2,24 @@ package main
 
 import (
 	"fmt"
+	"html"
 	"net/http"
 	"strings"
 	"sync"
 )
+
+var bare_html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>%s</title>
+	<style>%s</style>
+</head>
+<body style="white-space: pre;">
+<pre>%s</pre>
+</body>
+</html>
+`
 
 type Viewer struct {
 	Dirs []Directory
@@ -48,7 +62,13 @@ func (v *Viewer) http_DirBrowser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if file_found {
-		fmt.Fprintf(w, file.Content)
+		var data string = string(file.Content)
+		if strings.Contains(file.Content, "<html>") && strings.Contains(file.Content, "</html>") {
+			data = fmt.Sprintf(bare_html, file.Name, "", html.EscapeString(file.Content))
+		}
+		fmt.Fprint(w, data)
+
+		fmt.Fprint(w, data)
 		return
 	}
 	for _, child := range dir.Children {
@@ -90,7 +110,6 @@ func (v *Viewer) serve() error {
 
 func GetDirs(str_dirs []string) []Directory {
 	var dirs []Directory
-	var files []File
 	var wg sync.WaitGroup
 	var murw sync.Mutex
 
@@ -105,7 +124,6 @@ func GetDirs(str_dirs []string) []Directory {
 			}
 			murw.Lock()
 			dirs = append(dirs, dir)
-			files = append(files, dir.Files...)
 			murw.Unlock()
 		}(dir, &wg, &murw)
 	}
