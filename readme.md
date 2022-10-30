@@ -6,6 +6,7 @@
 * View your imported templates with `quickgo -v (name of project)`.
 * List all your imported templates with `quickgo -l`.
 * Define a name for each project, display it by using `$$PROJECT_NAME$$` in your templates, then use the template.
+* Quickly preview any template you've made via `quickgo -serve -o` (`-o` Is optional to open browser right away.)
 
 ## Information:
 When using `-l`, the default embedded configs are highlighted in purple. 

@@ -71,7 +71,7 @@ func main() {
 	location := flag.Bool("loc", false, "Location of the executable")
 	del_conf := flag.Bool("del", false, "Delete a config")
 	RAW = flag.Bool("raw", false, "Output raw project from json")
-	serve := flag.Bool("serve", false, "Serve the project files over http to preview")
+	serve := flag.Bool("serve", false, "Serve the project files over http to preview (optional -o)")
 	openBrowser := flag.Bool("o", false, "Open the browser after serving the project")
 
 	if len(os.Args) == 1 {

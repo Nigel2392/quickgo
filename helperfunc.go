@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/Nigel2392/typeutils"
 )
@@ -64,4 +65,13 @@ func SortFiles(files []File) []File {
 		return files[i].Name < files[j].Name
 	})
 	return files
+}
+
+func Loading(s string, l int) {
+	fmt.Print(Craft(CMD_Bold, Craft(CMD_Red, s)))
+	for i := 0; i < l; i++ {
+		fmt.Print(Craft(CMD_Bold, Craft(CMD_Red, ".")))
+		time.Sleep(1 * time.Second)
+	}
+	fmt.Println()
 }
