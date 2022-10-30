@@ -14,16 +14,37 @@
     <body>
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
             <a class="navbar-brand" href="/">
-                <span class="quickgo-logo">
-                    <span class="quickgo-quick">Quick</span>
-                    <span class="quickgo-go">
-                        <span class="quickgo-span quickgo-span-1"></span>
-                        <span class="quickgo-span quickgo-span-2"></span>
-                        <span class="quickgo-span quickgo-span-3"></span>
-                        go
+                <div class="stack noselect" style="--stacks: 3;">
+                    <span class="stackspan" style="--index: 0;">
+                        <span class="quickgo-quick">Quick</span>
+                        <span class="quickgo-go">
+                            <span class="quickgo-span quickgo-span-1"></span>
+                            <span class="quickgo-span quickgo-span-2"></span>
+                            <span class="quickgo-span quickgo-span-3"></span>
+                            go
+                        </span>
+
                     </span>
-                    <!-- <img class="quickgo-go-logo" src="/static/Go.png" alt="Sorry, this image could not be loaded!"> -->
-                </span>
+                    <span class="stackspan" style="--index: 1;">
+                        <span class="quickgo-quick">Quick</span>
+                        <span class="quickgo-go">
+                            <span class="quickgo-span quickgo-span-1"></span>
+                            <span class="quickgo-span quickgo-span-2"></span>
+                            <span class="quickgo-span quickgo-span-3"></span>
+                            go
+                        </span>
+
+                    </span>
+                    <span class="stackspan" style="--index: 2;">
+                        <span class="quickgo-quick">Quick</span>
+                        <span class="quickgo-go">
+                            <span class="quickgo-span quickgo-span-1"></span>
+                            <span class="quickgo-span quickgo-span-2"></span>
+                            <span class="quickgo-span quickgo-span-3"></span>
+                            go
+                        </span>
+                    </span>
+                </div>
             </a>
             <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
                 <div class="navbar-nav">
@@ -35,16 +56,15 @@
             </div>
 
         </nav>
+
         <div class="row">
             <div class="col-2">
             </div>
             <div class="col-8">
                 {{block "content" .}}
-        
                 {{end}}
             </div>
             <div class="col-2">
-
             </div>
         </div>
 
