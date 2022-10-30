@@ -132,7 +132,6 @@ func GetDir(name string, project_name string) (Directory, error) {
 		}
 		file = ReplaceNames(file, project_name)
 	}
-
 	dir, err := DeSerializeDir(file)
 	if strings.ToLower(AppConfig.Encoder) == "gob" {
 		dir := RenameDirData(dir, project_name)
@@ -162,7 +161,9 @@ func ListConfigs() []string {
 		name_ext := strings.Split(name, ".")
 		if len(name) > 1 {
 			name = name_ext[0]
-			filenames = append(filenames, name)
+			if strings.EqualFold(name_ext[len(name_ext)-1], strings.ToLower(AppConfig.Encoder)) {
+				filenames = append(filenames, name)
+			}
 		}
 	}
 	return filenames
@@ -175,8 +176,10 @@ func ListInternalConfigs() []string {
 	}
 	var namelist []string
 	for _, f := range files {
-		fname := strings.Split(f.Name(), ".")
-		namelist = append(namelist, fname[0])
+		name_ext := strings.Split(f.Name(), ".")
+		if strings.EqualFold(name_ext[len(name_ext)-1], strings.ToLower(AppConfig.Encoder)) {
+			namelist = append(namelist, name_ext[0])
+		}
 	}
 	return namelist
 }
