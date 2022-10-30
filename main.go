@@ -71,10 +71,64 @@ type File struct {
 	Content string `json:"content"`
 }
 
+func (f *File) SizeStr() string {
+	size := len(f.Content)
+	return sizeStr(size)
+}
+
 type Directory struct {
 	Name     string      `json:"name"`
 	Children []Directory `json:"directory"`
 	Files    []File      `json:"files"`
+}
+
+func (d *Directory) GetSortedFiles() []Directory {
+	data := SortDirs(d.Children)
+	fmt.Println(data)
+	return data
+}
+func (d *Directory) GetSortedChildren() []File {
+	data := SortFiles(d.Files)
+	fmt.Println(data)
+	return data
+}
+func (d *Directory) GetName() string {
+	return d.Name
+}
+func (f *File) GetName() string {
+	return f.Name
+}
+
+func (d *Directory) Size() int64 {
+	var size int64
+	for _, file := range d.Files {
+		size += int64(len(file.Content))
+	}
+	for _, child := range d.Children {
+		size += child.Size()
+	}
+	return int64(size)
+}
+func (d *Directory) SizeStr() string {
+	size := d.Size()
+	return sizeStr(size)
+}
+
+func sizeStr[T int | int16 | int32 | int64](size T) string {
+	f_size := float64(size)
+	if f_size < 1024 {
+		return fmt.Sprintf("%d b", int(f_size))
+	}
+	f_size = f_size / 1024
+	if f_size < 1024 {
+		return fmt.Sprintf("%.1f KB", f_size)
+	}
+	f_size = f_size / 1024
+	if f_size < 1024 {
+		return fmt.Sprintf("%.1f MB", f_size)
+	}
+	f_size = f_size / 1024
+	return fmt.Sprintf("%.1f GB", f_size)
 }
 
 func FileToDir(file []byte) (Directory, error) {

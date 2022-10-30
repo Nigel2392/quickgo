@@ -6,17 +6,15 @@ body{
 ::-webkit-scrollbar {
     width: 10px;
     height: 95%;
-  }
-  
-   
-  /* Handle */
-  ::-webkit-scrollbar-thumb {
+}
+/* Handle */
+::-webkit-scrollbar-thumb {
     background: #888; 
     border-radius: 10px;
-  }
-  
-  /* Handle on hover */
-  ::-webkit-scrollbar-thumb:hover {
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
     background: #555; 
 }
 
@@ -27,18 +25,47 @@ body{
     font-size: 30px;
     font-weight:800;
     /* Color gradient top to bottom, from rgb(28, 255, 236) to rgb(202, 28, 255) */
+    background-clip: text;
     background: #DB00A8;
     background: linear-gradient(to top, #DB00A8 15%, #8D0AFF 38%, #00CCFF 59%, #00DBBE 74%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 .quickgo-go{
+    position:relative;
     font-size: 30px;
     font-weight:800;
     color:#00dbbe;
     font-style: italic;
     text-transform: uppercase;
+    margin-left:8px;
 }
+.quickgo-span{
+    height:2px;
+    border-radius: 5px;
+    background-color: #00dbbe;
+}
+.quickgo-span-1{
+    position: absolute;
+    top: 30%;
+    left: -8%;
+    width:5px;
+}
+.quickgo-span-2{
+    position: absolute;
+    top: 48%;
+    left: -22%;
+    width: 8px;
+    height:3px;
+}
+.quickgo-span-3{
+    position: absolute;
+    top: 70%;
+    left: -10%;
+    width:4px;
+}
+
+
 .quickgo-go-logo{
     width: 150px;
     background-size: contain;
@@ -57,6 +84,7 @@ body{
     overflow-y: scroll;
     /* border-radius: 0px 0px 5px 5px; */
     border-radius: 10px;
+    box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.75);
 }
 .quickgo-dir-link-container{
     border-bottom: 1px solid #bbb;
@@ -70,7 +98,7 @@ body{
     color: #555;
     font-size: 25px;
     text-decoration: none;
-    width:100%;
+    width:50%;
     transition: all 0.3s ease;
     margin-left: 20px;
 }
@@ -89,4 +117,51 @@ body{
     margin-left: 20px;
     margin-top: 10px;
     margin-bottom: 10px;
+    color: rgb(94, 16, 16)
+}
+.quickgo-github-url{
+    position: absolute;
+    bottom: 0;
+    right: 0;
+}
+.quickgo-tooltip{
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 20px;
+    color: #888;
+    cursor: pointer;
+}
+.quickgo-tooltip:hover{
+    color: #9200ff;
+}
+.quickgo-tooltip-text{
+    visibility: hidden;
+    width: 120px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 0;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -60px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.quickgo-tooltip-text::after{
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #555 transparent transparent transparent;
+}
+.quickgo-tooltip:hover .quickgo-tooltip-text{
+    visibility: visible;
+    opacity: 1;
 }

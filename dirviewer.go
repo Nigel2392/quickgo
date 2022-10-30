@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os/exec"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"text/template"
@@ -16,25 +17,48 @@ import (
 var TemplateFS embed.FS
 
 type Viewer struct {
-	Dirs []Directory
+	Dirs      []Directory
+	templates []string
 }
 
 type TemplateData struct {
-	Dirs            []Directory
-	Dir             Directory
-	DirEmpty        bool
-	FileContent     string
-	HasMultipleDirs bool
-	IsFile          bool
+	Dirs        []Directory
+	Dir         Directory
+	DirEmpty    bool
+	FileContent string
+	IsRoot      bool
+	IsFile      bool
 }
 
 func NewViewer(str_dirs []string) *Viewer {
 	dirs := GetDirs(str_dirs)
-	return &Viewer{Dirs: dirs}
+	return &Viewer{
+		Dirs: dirs,
+		templates: []string{
+			"templates/base.tmpl",
+			"templates/dir_display.tmpl",
+			"templates/go_back.tmpl",
+			"templates/index.tmpl",
+		},
+	}
 }
 
-func GetIndexTemplate() (*template.Template, error) {
-	return template.ParseFS(TemplateFS, "templates/index.tmpl", "templates/base.tmpl")
+func (v *Viewer) serve(openBrowser bool) error {
+	http.Handle("/static/", getStaticHandler())
+	http.HandleFunc("/", v.http_DirBrowser)
+	fmt.Println(Craft(CMD_BRIGHT_Blue, "Serving on http://localhost:8000"))
+	// Open browser to localhost:8000
+	if openBrowser {
+		err := OpenBrowser("http://localhost:8000")
+		if err != nil {
+			fmt.Println(Craft(CMD_BRIGHT_Red, "Error opening browser: "+err.Error()))
+		}
+	}
+	return http.ListenAndServe("127.0.0.1:8000", nil)
+}
+
+func (v *Viewer) GetIndexTemplate() (*template.Template, error) {
+	return template.ParseFS(TemplateFS, v.templates...)
 }
 
 func getStaticHandler() http.Handler {
@@ -47,26 +71,17 @@ func (v *Viewer) http_DirBrowser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var url string = r.URL.Path
-	HTML_TEMPLATE, err := GetIndexTemplate()
+	HTML_TEMPLATE, err := v.GetIndexTemplate()
 	if err != nil {
 		fmt.Fprintf(w, "Error: %s", err.Error())
 	}
 	if url == "/" {
-		//fmt.Fprint(w, "<h1 style=\"color:#9200ff;font-style: helvetica;\">Templates: </h1>")
-		//for _, dir := range v.Dirs {
-		//	fmt.Fprintf(w, "<a href='%s/' style=\"font-size:1.5em;font-weight:bold;text-decoration:none;color:#ab22ff;\">%s</a><br>", dir.Name, dir.Name)
-		//}
-		// Load index.html
-		HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", TemplateData{Dirs: v.Dirs, HasMultipleDirs: true})
+		dirs := SortDirs(v.Dirs)
+		HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", TemplateData{Dirs: dirs, IsRoot: true})
 		return
-	} else {
-		url = strings.Trim(url, "/")
 	}
+	url = strings.Trim(url, "/")
 	path := strings.Split(url, "/")
-	if path[0] == "static" {
-		getStaticHandler().ServeHTTP(w, r)
-		return
-	}
 	var dir Directory
 	for _, l_dir := range v.Dirs {
 		if l_dir.Name == path[0] {
@@ -74,7 +89,6 @@ func (v *Viewer) http_DirBrowser(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-
 	dir, file, file_found, err := v.http_TraverseDir(dir, path[1:])
 	if err != nil {
 		fmt.Fprintf(w, "Error: %s", err)
@@ -85,9 +99,6 @@ func (v *Viewer) http_DirBrowser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if file_found {
-		//if strings.Contains(file.Content, "<html>") && strings.Contains(file.Content, "</html>") {
-		//	data = fmt.Sprintf(bare_html, file.Name, "", html.EscapeString(file.Content))
-		//}
 		if strings.Contains(http.DetectContentType([]byte(file.Content)), "text/plain") {
 			HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", TemplateData{FileContent: file.Content, IsFile: true})
 			return
@@ -96,12 +107,8 @@ func (v *Viewer) http_DirBrowser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	//for _, child := range dir.Children {
-	//	fmt.Fprintf(w, "<a href=\"%s/\" style=\"font-size:1.2em;font-weight:bold;text-decoration:none;color:#9200ff;\">%s</a><br>", child.Name, child.Name)
-	//}
-	//for _, file := range dir.Files {
-	//	fmt.Fprintf(w, "<a href=\"%s/\" style=\"font-size:1em;font-weight:bold;text-decoration:none;\">%s</a><br>", file.Name, file.Name)
-	//}
+	dir.Children = SortDirs(dir.Children)
+	dir.Files = SortFiles(dir.Files)
 	HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", TemplateData{Dir: dir})
 }
 
@@ -126,20 +133,6 @@ func (v *Viewer) http_TraverseDir(dir Directory, path []string) (Directory, File
 		}
 	}
 	return Directory{}, File{}, false, fmt.Errorf("path not found")
-}
-
-func (v *Viewer) serve(openBrowser bool) error {
-	http.Handle("/static/", getStaticHandler())
-	http.HandleFunc("/", v.http_DirBrowser)
-	fmt.Println(Craft(CMD_BRIGHT_Blue, "Serving on http://localhost:8000"))
-	// Open browser to localhost:8000
-	if openBrowser {
-		err := OpenBrowser("http://localhost:8000")
-		if err != nil {
-			fmt.Println(Craft(CMD_BRIGHT_Red, "Error opening browser: "+err.Error()))
-		}
-	}
-	return http.ListenAndServe("127.0.0.1:8000", nil)
 }
 
 func GetDirs(str_dirs []string) []Directory {
@@ -181,4 +174,18 @@ func OpenBrowser(url string) error {
 		err = fmt.Errorf("unsupported platform")
 	}
 	return err
+}
+
+func SortDirs(dirs []Directory) []Directory {
+	sort.Slice(dirs, func(i, j int) bool {
+		return dirs[i].Name < dirs[j].Name
+	})
+	return dirs
+}
+
+func SortFiles(files []File) []File {
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].Name < files[j].Name
+	})
+	return files
 }

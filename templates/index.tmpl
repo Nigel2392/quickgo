@@ -3,34 +3,27 @@
 {{define "content"}}
     <div class="box-content">
         {{if .DirEmpty}}
-            <div class="quickgo-dir-link-container">
-                <a class="quickgo-dir-link quickgo-dir" href="../">./</a><br>
+            {{template "go_back" .}}
+            <div style="display: flex;align-items: center;justify-content: center;height:50%;">
+                <h1 style="color:#ff5555;">Directory is empty</h1>
             </div>
-            <h1 style="color:#ff5555;">Directory is empty</h1>
         {{else}}
-            {{if .HasMultipleDirs}}
+            {{if .IsRoot}}
                 {{range .Dirs}}
-                    <div class="quickgo-dir-link-container">
-                        <a class="quickgo-dir-link quickgo-dir" href="{{.Name}}/">{{.Name}}</a><br>
-                    </div>
+                    {{template "dir_display" .}}
                 {{end}}
             {{else if .IsFile}}
-                <div class="quickgo-dir-link-container">
-                    <a class="quickgo-dir-link quickgo-dir" href="../">./</a><br>
-                </div>
+                {{template "go_back" .}}
                 <pre class="quickgo-file-content">{{.FileContent}}</pre>
             {{else}}
-                <div class="quickgo-dir-link-container">
-                    <a class="quickgo-dir-link quickgo-dir" href="../">../</a><br>
-                </div>
+                {{template "go_back" .}}
                 {{range .Dir.Children}}
-                    <div class="quickgo-dir-link-container">
-                        <a class="quickgo-dir-link quickgo-dir" href="{{.Name}}/">{{.Name}}</a><br>
-                    </div>
+                    {{template "dir_display" .}}
                 {{end}}
                 {{range .Dir.Files}}
                     <div class="quickgo-dir-link-container">
-                        <a class="quickgo-dir-link quickgo-file" href="{{.Name}}/">{{.Name}}</a><br>
+                        <a class="quickgo-dir-link quickgo-file" style="float:left;" href="{{.Name}}/">{{.Name}}</a>
+                        <span style="float:right">{{.SizeStr}}</span>
                     </div>
                 {{end}}
             {{end}}
