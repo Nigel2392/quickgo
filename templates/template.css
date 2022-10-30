@@ -1,0 +1,92 @@
+body{
+    background-color: rgb(63, 63, 63);
+    overflow-x: hidden;
+}
+/* width */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 95%;
+  }
+  
+   
+  /* Handle */
+  ::-webkit-scrollbar-thumb {
+    background: #888; 
+    border-radius: 10px;
+  }
+  
+  /* Handle on hover */
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555; 
+}
+
+.quickgo-logo{
+    margin-left:20px;
+}
+.quickgo-quick{
+    font-size: 30px;
+    font-weight:800;
+    /* Color gradient top to bottom, from rgb(28, 255, 236) to rgb(202, 28, 255) */
+    background: #DB00A8;
+    background: linear-gradient(to top, #DB00A8 15%, #8D0AFF 38%, #00CCFF 59%, #00DBBE 74%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.quickgo-go{
+    font-size: 30px;
+    font-weight:800;
+    color:#00dbbe;
+    font-style: italic;
+    text-transform: uppercase;
+}
+.quickgo-go-logo{
+    width: 150px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+.navbar-brand{
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+.box-content{
+    margin-top:10px;
+    background-color: #f5f5f5;
+    padding-top: 20px;
+    height:85vh !important;
+    overflow-y: scroll;
+    /* border-radius: 0px 0px 5px 5px; */
+    border-radius: 10px;
+}
+.quickgo-dir-link-container{
+    border-bottom: 1px solid #bbb;
+    border-radius: 5px;
+    background-color: #f5f5f5;
+    width: 100% !important;
+    height: 45px
+}
+.quickgo-dir-link {
+    display:block;
+    color: #555;
+    font-size: 25px;
+    text-decoration: none;
+    width:100%;
+    transition: all 0.3s ease;
+    margin-left: 20px;
+}
+.quickgo-dir-link:hover {
+    color: #9200ff;
+    text-decoration: none;
+}
+.quickgo-dir{
+    color: #888;
+}
+.quickgo-file{
+    font-size: 20px;
+    font-style: italic;
+}
+.quickgo-file-content{
+    margin-left: 20px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}

@@ -1,0 +1,39 @@
+{{template "base" .}}
+
+{{define "content"}}
+    <div class="box-content">
+        {{if .DirEmpty}}
+            <div class="quickgo-dir-link-container">
+                <a class="quickgo-dir-link quickgo-dir" href="../">./</a><br>
+            </div>
+            <h1 style="color:#ff5555;">Directory is empty</h1>
+        {{else}}
+            {{if .HasMultipleDirs}}
+                {{range .Dirs}}
+                    <div class="quickgo-dir-link-container">
+                        <a class="quickgo-dir-link quickgo-dir" href="{{.Name}}/">{{.Name}}</a><br>
+                    </div>
+                {{end}}
+            {{else if .IsFile}}
+                <div class="quickgo-dir-link-container">
+                    <a class="quickgo-dir-link quickgo-dir" href="../">./</a><br>
+                </div>
+                <pre class="quickgo-file-content">{{.FileContent}}</pre>
+            {{else}}
+                <div class="quickgo-dir-link-container">
+                    <a class="quickgo-dir-link quickgo-dir" href="../">../</a><br>
+                </div>
+                {{range .Dir.Children}}
+                    <div class="quickgo-dir-link-container">
+                        <a class="quickgo-dir-link quickgo-dir" href="{{.Name}}/">{{.Name}}</a><br>
+                    </div>
+                {{end}}
+                {{range .Dir.Files}}
+                    <div class="quickgo-dir-link-container">
+                        <a class="quickgo-dir-link quickgo-file" href="{{.Name}}/">{{.Name}}</a><br>
+                    </div>
+                {{end}}
+            {{end}}
+        {{end}}
+    </div>
+{{end}}

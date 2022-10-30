@@ -1,0 +1,50 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title></title>
+        <link rel="stylesheet" href="/static/bootstrap/bootstrap.min.css" type="text/css">
+        <link rel="stylesheet" href="/static/template.css" type="text/css">
+        <script src="/static/bootstrap/bootstrap.bundle.js"></script>
+        {{block "extra_css" .}}
+
+        {{end}}
+    </head>
+    <body>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <a class="navbar-brand" href="/">
+                <span class="quickgo-logo">
+                    <span class="quickgo-quick">Quick</span>
+                    <span class="quickgo-go">go</span>
+                    <!-- <img class="quickgo-go-logo" src="/static/Go.png" alt="Sorry, this image could not be loaded!"> -->
+                </span>
+            </a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+                <div class="navbar-nav">
+                    <a class="nav-item nav-link" href="/">Root</a>
+                </div>
+            </div>
+        </nav>
+        <div class="row">
+            <div class="col-2">
+            </div>
+            <div class="col-8">
+                {{block "content" .}}
+        
+                {{end}}
+            </div>
+            <div class="col-2">
+
+            </div>
+        </div>
+
+        {{block "extra_js" .}}
+        
+        {{end}}
+    </body>
+</html>
+{{end}}

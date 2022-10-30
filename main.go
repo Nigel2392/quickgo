@@ -373,6 +373,7 @@ func main() {
 	del_conf := flag.Bool("del", false, "Delete a config")
 	RAW = flag.Bool("raw", false, "Output raw project from json")
 	serve := flag.Bool("serve", false, "Serve the project files over http to preview")
+	openBrowser := flag.Bool("o", false, "Open the browser after serving the project")
 
 	if len(os.Args) == 1 {
 		PrintLogo()
@@ -390,7 +391,7 @@ func main() {
 		dirnames := ListInternalConfigs()
 		dirnames = append(dirnames, ListConfigs()...)
 		viewer := NewViewer(dirnames)
-		if err := viewer.serve(); err != nil {
+		if err := viewer.serve(*openBrowser); err != nil {
 			log.Fatal(err)
 		}
 	} else if *config_name != "" {
@@ -423,6 +424,10 @@ func main() {
 		}
 		if *proj_name == "" {
 			*proj_name = *get_config
+		}
+		if strings.EqualFold(*proj_name, "static") {
+			*proj_name = strings.Replace(strings.ToLower(*proj_name), "static", "tpl_static", 1)
+			fmt.Println(Craft(CMD_Red, "Warning: The project name contains 'static' which is reserved for static files when serving.\n The project name will be changed to: "+*proj_name))
 		}
 		err = WriteJSONConfig(dir, EXE_DIR+"\\conf\\"+*proj_name+".json")
 		if err != nil {
