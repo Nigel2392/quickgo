@@ -136,6 +136,7 @@ func main() {
 		if *proj_name == "" {
 			*proj_name = *get_config
 		}
+		*proj_name = URLOmit(*proj_name)
 		if strings.EqualFold(*proj_name, "static") {
 			*proj_name = strings.Replace(strings.ToLower(*proj_name), "static", "tpl_static", 1)
 			fmt.Println(Craft(CMD_Red, "Warning: The project name contains 'static' which is reserved for static files when serving.\n The project name will be changed to: "+*proj_name))

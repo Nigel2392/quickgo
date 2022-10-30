@@ -144,16 +144,7 @@ func GetDir(name string, project_name string) (Directory, error) {
 		if project_name == "" {
 			project_name = name
 		}
-		var project_name_urlomitted = project_name
-		if strings.Contains(project_name, "/") {
-			proj_vars := strings.Split(project_name, "/")
-			project_name_urlomitted = proj_vars[len(proj_vars)-1]
-		}
-		if strings.Contains(project_name, "\\") {
-			proj_vars := strings.Split(project_name, "\\")
-			project_name_urlomitted = proj_vars[len(proj_vars)-1]
-		}
-		project_name_urlomitted = strings.ReplaceAll(project_name_urlomitted, "-", "_")
+		project_name_urlomitted := URLOmit(project_name)
 		file = bytes.Replace(file, []byte("$$PROJECT_NAME$$"), []byte(project_name), -1)
 		var re = regexp.MustCompile(`\$\$PROJECT_NAME\s*;\s*OMITURL\$\$`)
 		file = re.ReplaceAll(file, []byte(project_name_urlomitted))
