@@ -38,7 +38,11 @@ func CreateProject(dir Directory, name string) {
 }
 
 func DeleteConfig(name string) error {
-	name = name + ".json"
+	if strings.ToLower(AppConfig.Encoder) == "json" {
+		name = name + ".json"
+	} else if strings.ToLower(AppConfig.Encoder) == "gob" {
+		name = name + ".gob"
+	}
 	return os.Remove(EXE_DIR + "\\conf\\" + name)
 }
 
@@ -60,24 +64,6 @@ func InitProject(name string, proj_name string, dir Directory) (Directory, error
 	// os.Chdir(path + "\\" + proj_name)
 	CreateProject(dir, proj_name)
 	return dir, nil
-}
-
-func InitLocalProject(conf_name string, project_name string) {
-	conf, err := ConfFS.ReadFile("conf/" + conf_name + ".json")
-	if err != nil {
-		log.Fatal(err)
-	}
-	dir, err := FileToDir(conf)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if project_name == "" {
-		project_name = conf_name
-	}
-	_, err = InitProject(conf_name, project_name, dir)
-	if err != nil {
-		log.Fatal(err)
-	}
 }
 
 func InitProjectConfig(path string) (Directory, error) {
