@@ -91,3 +91,19 @@ func URLOmit(url string) string {
 	urlomitted = strings.ReplaceAll(urlomitted, ".", "_")
 	return urlomitted
 }
+func sizeStr[T int | int16 | int32 | int64](size T) string {
+	f_size := float64(size)
+	if f_size < 1024 {
+		return fmt.Sprintf("%d b", int(f_size))
+	}
+	f_size = f_size / 1024
+	if f_size < 1024 {
+		return fmt.Sprintf("%.1f KB", f_size)
+	}
+	f_size = f_size / 1024
+	if f_size < 1024 {
+		return fmt.Sprintf("%.1f MB", f_size)
+	}
+	f_size = f_size / 1024
+	return fmt.Sprintf("%.1f GB", f_size)
+}

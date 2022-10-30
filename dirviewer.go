@@ -24,6 +24,7 @@ type TemplateData struct {
 	FileContent string
 	IsRoot      bool
 	IsFile      bool
+	Datasize    string
 }
 
 func NewViewer(str_dirs []string) *Viewer {
@@ -96,7 +97,7 @@ func (v *Viewer) http_DirBrowser(w http.ResponseWriter, r *http.Request) {
 	}
 	if file_found {
 		if strings.Contains(http.DetectContentType([]byte(file.Content)), "text/plain") {
-			HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", TemplateData{FileContent: file.Content, IsFile: true})
+			HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", TemplateData{FileContent: file.Content, IsFile: true, Datasize: sizeStr(len(file.Content))})
 			return
 		} else {
 			fmt.Fprint(w, file.Content)
@@ -105,7 +106,7 @@ func (v *Viewer) http_DirBrowser(w http.ResponseWriter, r *http.Request) {
 	}
 	dir.Children = SortDirs(dir.Children)
 	dir.Files = SortFiles(dir.Files)
-	HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", TemplateData{Dir: dir})
+	HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", TemplateData{Dir: dir, Datasize: dir.SizeStr()})
 }
 
 func (v *Viewer) http_TraverseDir(dir Directory, path []string) (Directory, File, bool, error) {

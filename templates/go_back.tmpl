@@ -1,5 +1,6 @@
 {{define "go_back"}}
     <div class="quickgo-dir-link-container">
-        <a class="quickgo-dir-link quickgo-dir" href="../">{{if .IsFile}}./{{else}}../{{end}}</a><br>
+        <a class="quickgo-dir-link quickgo-dir" href="../">{{if .IsFile}}./{{else}}../{{end}}</a>
+        <span class="quickgo-datasize">Total size: {{.Datasize}}</span>
     </div>
 {{end}}

@@ -9,8 +9,15 @@
 * Quickly preview any template you've made via `quickgo -serve -o` (`-o` Is optional to open browser right away.)
 
 ## Information:
-When using `-l`, the default embedded configs are highlighted in purple. 
+When using `-l`, the default embedded configs are highlighted in cyan. 
 These default configs are only available via the "-d (template name)" argument.
+
+## Warning:
+QuickGo uses JSON serialization to save the file to disk, which means you cannot use some binary data in your templates.
+This however does mean that you can use any text editor to edit your templates, and easily share them with others.
+When using -serve, QuickGo might use a lot of memory depending on the size of your template configurations. 
+We load all the files into memory before serving them, this is to save on loading times.
+
 
 ## Installation:
 ```

@@ -22,8 +22,8 @@
                 {{end}}
                 {{range .Dir.Files}}
                     <div class="quickgo-dir-link-container">
-                        <a class="quickgo-dir-link quickgo-file" style="float:left;" href="{{.Name}}/">{{.Name}}</a>
-                        <span style="float:right">{{.SizeStr}}</span>
+                        <a class="quickgo-dir-link quickgo-file" href="{{.Name}}/">{{.Name}}</a>
+                        <span class="quickgo-datasize">{{.SizeStr}}</span>
                     </div>
                 {{end}}
             {{end}}
