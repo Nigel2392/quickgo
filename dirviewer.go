@@ -43,15 +43,15 @@ func NewViewer(str_dirs []string) *Viewer {
 func (v *Viewer) serve(openBrowser bool) error {
 	http.Handle("/static/", v.getStaticHandler())
 	http.HandleFunc("/", v.http_DirBrowser)
-	fmt.Println(Craft(CMD_BRIGHT_Blue, "Serving on http://localhost:8000"))
+	fmt.Println(Craft(CMD_BRIGHT_Blue, "Serving on http://"+AppConfig.Host+":"+AppConfig.Port))
 	// Open browser to localhost:8000
 	if openBrowser {
-		err := OpenBrowser("http://localhost:8000")
+		err := OpenBrowser("http://" + AppConfig.Host + ":" + AppConfig.Port)
 		if err != nil {
 			fmt.Println(Craft(CMD_BRIGHT_Red, "Error opening browser: "+err.Error()))
 		}
 	}
-	return http.ListenAndServe("127.0.0.1:8000", nil)
+	return http.ListenAndServe(AppConfig.Host+":"+AppConfig.Port, nil)
 }
 
 func (v *Viewer) GetIndexTemplate() (*template.Template, error) {

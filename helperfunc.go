@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -106,4 +109,74 @@ func sizeStr[T int | int16 | int32 | int64](size T) string {
 	}
 	f_size = f_size / 1024
 	return fmt.Sprintf("%.1f GB", f_size)
+}
+
+func WriteConf(path string, data []byte) error {
+	// Check if the file exists
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		// Create the file
+		err = os.WriteFile(path, data, 0644)
+		if err != nil {
+			return err
+		}
+	} else {
+		// Delete the file
+		answer := RepeatAsk("The file already exists, do you want to overwrite it? (y/n): ", []string{"y", "n"})
+		if answer == "y" {
+			err := os.WriteFile(path, data, 0644)
+			if err != nil {
+				return err
+			}
+		} else if answer == "n" {
+			answer = RepeatAsk("Do you want to change the name of the file? (y/n): ", []string{"y", "n"})
+			if answer == "y" {
+				name := typeutils.Ask("Enter the name of the file: ")
+				if strings.ToLower(AppConfig.Encoder) == "json" {
+					name = name + ".json"
+				} else if strings.ToLower(AppConfig.Encoder) == "gob" {
+					name = name + ".gob"
+				}
+				err = os.WriteFile(EXE_DIR+"\\conf\\"+name, data, 0644)
+				if err != nil {
+					return err
+				}
+			} else if answer == "n" {
+				os.Exit(1)
+			}
+		}
+	}
+	return nil
+}
+
+func gobEncode(dir Directory) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(dir)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func gobDecode(data []byte) (Directory, error) {
+	var dir Directory
+	buf := bytes.NewBuffer(data)
+	dec := gob.NewDecoder(buf)
+	err := dec.Decode(&dir)
+	if err != nil {
+		return Directory{}, err
+	}
+	return dir, nil
+}
+
+func ReplaceNames(data []byte, name string) []byte {
+	name_urlomitted := URLOmit(name)
+	data = bytes.Replace(data, []byte("$$PROJECT_NAME$$"), []byte(name), -1)
+	var re = regexp.MustCompile(`\$\$PROJECT_NAME\s*;\s*OMITURL\$\$`)
+	data = re.ReplaceAll(data, []byte(name_urlomitted))
+	return data
+}
+
+func ReplaceNamesString(data string, name string) string {
+	return string(ReplaceNames([]byte(data), name))
 }

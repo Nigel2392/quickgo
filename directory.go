@@ -82,3 +82,25 @@ func GetDirs(str_dirs []string) []Directory {
 
 	return dirs
 }
+
+func DeSerializeDir(data []byte) (Directory, error) {
+	if strings.ToLower(AppConfig.Encoder) == "json" {
+		return FileToDir(data)
+	} else if strings.ToLower(AppConfig.Encoder) == "gob" {
+		return gobDecode(data)
+	} else {
+		return Directory{}, fmt.Errorf("invalid encoder")
+	}
+}
+
+func RenameDirData(dir Directory, project_name string) Directory {
+	dir.Name = ReplaceNamesString(dir.Name, project_name)
+	for i, file := range dir.Files {
+		dir.Files[i].Name = ReplaceNamesString(file.Name, project_name)
+		dir.Files[i].Content = ReplaceNamesString(file.Content, project_name)
+	}
+	for i, child := range dir.Children {
+		dir.Children[i] = RenameDirData(child, project_name)
+	}
+	return dir
+}

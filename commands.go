@@ -1,16 +1,12 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
-
-	"github.com/Nigel2392/typeutils"
 )
 
 func PrintLocation() {
@@ -132,7 +128,11 @@ func GetConfFromDir(path string) (Directory, error) {
 	return dir, nil
 }
 func GetDir(name string, project_name string) (Directory, error) {
-	name = name + ".json"
+	if strings.ToLower(AppConfig.Encoder) == "json" {
+		name = name + ".json"
+	} else if strings.ToLower(AppConfig.Encoder) == "gob" {
+		name = name + ".gob"
+	}
 	file, err := os.ReadFile(EXE_DIR + "\\conf\\" + name)
 	if err != nil {
 		file, err = ConfFS.ReadFile("conf/" + name)
@@ -140,22 +140,19 @@ func GetDir(name string, project_name string) (Directory, error) {
 			return Directory{}, err
 		}
 	}
-	if !*RAW {
+	if !*RAW && strings.ToLower(AppConfig.Encoder) == "json" {
 		if project_name == "" {
 			project_name = name
 		}
-		project_name_urlomitted := URLOmit(project_name)
-		file = bytes.Replace(file, []byte("$$PROJECT_NAME$$"), []byte(project_name), -1)
-		var re = regexp.MustCompile(`\$\$PROJECT_NAME\s*;\s*OMITURL\$\$`)
-		file = re.ReplaceAll(file, []byte(project_name_urlomitted))
+		file = ReplaceNames(file, project_name)
 	}
 
-	var dir Directory
-	err = json.Unmarshal(file, &dir)
-	if err != nil {
-		return Directory{}, err
+	dir, err := DeSerializeDir(file)
+	if strings.ToLower(AppConfig.Encoder) == "gob" {
+		dir := RenameDirData(dir, project_name)
+		return dir, nil
 	}
-	return dir, nil
+	return dir, err
 }
 
 func ListFiles(dir Directory, indent string) {
@@ -198,38 +195,35 @@ func ListInternalConfigs() []string {
 	return namelist
 }
 
+func WriteConfig(dir Directory, path string) error {
+	if strings.ToLower(AppConfig.Encoder) == "json" {
+		return WriteJSONConfig(dir, path+".json")
+	} else if strings.ToLower(AppConfig.Encoder) == "gob" {
+		return WriteGOBConfig(dir, path+".gob")
+	}
+	return fmt.Errorf("invalid encoder")
+
+}
 func WriteJSONConfig(dir Directory, path string) error {
 	json_data, err := json.MarshalIndent(dir, "", "  ")
 	if err != nil {
 		return err
 	}
-	// Check if the file exists
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		// Create the file
-		err = os.WriteFile(path, json_data, 0644)
-		if err != nil {
-			return err
-		}
-	} else {
-		// Delete the file
-		answer := RepeatAsk("The file already exists, do you want to overwrite it? (y/n): ", []string{"y", "n"})
-		if answer == "y" {
-			err := os.WriteFile(path, json_data, 0644)
-			if err != nil {
-				return err
-			}
-		} else if answer == "n" {
-			answer = RepeatAsk("Do you want to change the name of the file? (y/n): ", []string{"y", "n"})
-			if answer == "y" {
-				name := typeutils.Ask("Enter the name of the file: ")
-				err = os.WriteFile(EXE_DIR+"\\conf\\"+name+"json", json_data, 0644)
-				if err != nil {
-					return err
-				}
-			} else if answer == "n" {
-				os.Exit(1)
-			}
-		}
+	err = WriteConf(path, json_data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func WriteGOBConfig(dir Directory, path string) error {
+	gob_data, err := gobEncode(dir)
+	if err != nil {
+		return err
+	}
+	err = WriteConf(path, gob_data)
+	if err != nil {
+		return err
 	}
 	return nil
 }

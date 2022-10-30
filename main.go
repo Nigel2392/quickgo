@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -40,6 +41,14 @@ var ConfFS embed.FS
 
 var RAW *bool
 
+type Configuration struct {
+	Host    string `json:"host"`
+	Port    string `json:"port"`
+	Encoder string `json:"encoder"`
+}
+
+var AppConfig Configuration
+
 func PrintLogo() {
 	str := Craft(CMD_Cyan, " $$$$$$\\            $$\\           $$\\         "+Craft(CMD_Cyan, "     $$$$$$\\            \n")) +
 		Craft(CMD_Cyan, "$$  __$$\\           \\__|          $$ |         "+Craft(CMD_Cyan, "   $$  __$$\\           \n")) +
@@ -55,8 +64,26 @@ func PrintLogo() {
 }
 
 func init() {
+	// Get user configurations
 	if _, err := os.Stat(EXE_DIR + "\\conf"); os.IsNotExist(err) {
 		os.Mkdir(EXE_DIR+"\\conf", 0755)
+	}
+	// Get application configuration
+	conf, err := os.ReadFile(EXE_DIR + "\\config.json")
+	if err != nil {
+		conf := Configuration{
+			Host:    "127.0.0.1",
+			Port:    "8080",
+			Encoder: "json",
+		}
+		confJSON, _ := json.Marshal(conf)
+		os.WriteFile(EXE_DIR+"\\config.json", confJSON, 0644)
+		AppConfig = conf
+	} else {
+		err = json.Unmarshal(conf, &AppConfig)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -141,7 +168,7 @@ func main() {
 			*proj_name = strings.Replace(strings.ToLower(*proj_name), "static", "tpl_static", 1)
 			fmt.Println(Craft(CMD_Red, "Warning: The project name contains 'static' which is reserved for static files when serving.\n The project name will be changed to: "+*proj_name))
 		}
-		err = WriteJSONConfig(dir, EXE_DIR+"\\conf\\"+*proj_name+".json")
+		err = WriteConfig(dir, EXE_DIR+"\\conf\\"+*proj_name)
 		if err != nil {
 			log.Fatal(err)
 		}
