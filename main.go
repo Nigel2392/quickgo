@@ -11,26 +11,25 @@ import (
 )
 
 var (
-	CMD_Bold             = "\033[1m"
-	CMD_Black            = "\033[30m"
-	CMD_BRIGHT_Blue      = "\033[34;m"
-	CMD_Blue             = "\033[34m"
-	CMD_BRIGHT_Cyan      = "\033[36;m"
-	CMD_Cyan             = "\033[36m"
-	CMD_BRIGHT_Gray      = "\033[37;m"
-	CMD_Gray             = "\033[37m"
-	CMD_BRIGHT_Green     = "\033[32;m"
-	CMD_Green            = "\033[32m"
-	CMD_BRIGHT_Purple    = "\033[35;m"
-	CMD_Purple           = "\033[35m"
-	CMD_BRIGHT_Underline = "\033[4;m"
-	CMD_Underline        = "\033[4m"
-	CMD_BRIGHT_Red       = "\033[31;m"
-	CMD_Red              = "\033[31m"
-	CMD_Reset            = "\033[0m"
-	CMD_White            = "\033[97m"
-	CMD_BRIGHT_Yellow    = "\033[33;m"
-	CMD_Yellow           = "\033[33m"
+	CMD_Bold          = "\033[1m"
+	CMD_Black         = "\033[30m"
+	CMD_BRIGHT_Blue   = "\033[34;1m"
+	CMD_Blue          = "\033[34m"
+	CMD_BRIGHT_Cyan   = "\033[36;1m"
+	CMD_Cyan          = "\033[36m"
+	CMD_BRIGHT_Gray   = "\033[37;1m"
+	CMD_Gray          = "\033[37m"
+	CMD_BRIGHT_Green  = "\033[32;1m"
+	CMD_Green         = "\033[32m"
+	CMD_BRIGHT_Purple = "\033[35;1m"
+	CMD_Purple        = "\033[35m"
+	CMD_Underline     = "\033[4m"
+	CMD_BRIGHT_Red    = "\033[31;1m"
+	CMD_Red           = "\033[31m"
+	CMD_Reset         = "\033[0m"
+	CMD_White         = "\033[97m"
+	CMD_BRIGHT_Yellow = "\033[33;1m"
+	CMD_Yellow        = "\033[33m"
 )
 
 var WORKING_DIR, _ = os.Getwd()
@@ -44,13 +43,13 @@ var RAW *bool
 func PrintLogo() {
 	str := Craft(CMD_Cyan, " $$$$$$\\            $$\\           $$\\         "+Craft(CMD_Cyan, "     $$$$$$\\            \n")) +
 		Craft(CMD_Cyan, "$$  __$$\\           \\__|          $$ |         "+Craft(CMD_Cyan, "   $$  __$$\\           \n")) +
-		Craft(CMD_Purple, "$$ /  $$ |$$\\   $$\\ $$\\  $$$$$$$\\ $$ |  $$\\ "+Craft(CMD_Cyan, "      $$ /  \\__| $$$$$$\\  \n")) +
-		Craft(CMD_Purple, "$$ |  $$ |$$ |  $$ |$$ |$$  _____|$$ | $$  |     "+Craft(CMD_Cyan, " $$ |$$$$\\ $$  __$$\\ \n")) +
-		Craft(CMD_Red, "$$ |  $$ |$$ |  $$ |$$ |$$ /      $$$$$$  /      "+Craft(CMD_Cyan, " $$ |\\_$$ |$$ /  $$ |\n")) +
-		Craft(CMD_Red, "$$ $$\\$$ |$$ |  $$ |$$ |$$ |      $$  _$$<      "+Craft(CMD_Cyan, "  $$ |  $$ |$$ |  $$ |\n")) +
-		Craft(CMD_Red, "\\$$$$$$ / \\$$$$$$  |$$ |\\$$$$$$$\\ $$ | \\$$\\   "+Craft(CMD_Cyan, "    \\$$$$$$  |\\$$$$$$  |\n")) +
-		Craft(CMD_Purple, " \\___"+Craft(CMD_Red, "$$$")+Craft(CMD_Purple, "\\  \\______/ \\__| \\_______|\\__|  \\__| ")+Craft(CMD_Cyan, "      \\______/  \\______/ \n")) +
-		Craft(CMD_Purple, "     \\___|                                         "+Craft(CMD_Cyan, "                   \n"))
+		Craft(CMD_Blue, "$$ /  $$ |$$\\   $$\\ $$\\  $$$$$$$\\ $$ |  $$\\ "+Craft(CMD_Cyan, "      $$ /  \\__| $$$$$$\\  \n")) +
+		Craft(CMD_Blue, "$$ |  $$ |$$ |  $$ |$$ |$$  _____|$$ | $$  |     "+Craft(CMD_Cyan, " $$ |$$$$\\ $$  __$$\\ \n")) +
+		Craft(CMD_Blue, "$$ |  $$ |$$ |  $$ |$$ |$$ /      $$$$$$  /      "+Craft(CMD_Cyan, " $$ |\\_$$ |$$ /  $$ |\n")) +
+		Craft(CMD_Purple, "$$ $$\\$$ |$$ |  $$ |$$ |$$ |      $$  _$$<      "+Craft(CMD_Cyan, "  $$ |  $$ |$$ |  $$ |\n")) +
+		Craft(CMD_Purple, "\\$$$$$$ / \\$$$$$$  |$$ |\\$$$$$$$\\ $$ | \\$$\\   "+Craft(CMD_Cyan, "    \\$$$$$$  |\\$$$$$$  |\n")) +
+		Craft(CMD_BRIGHT_Purple, " \\___"+CMD_Reset+Craft(CMD_Purple, "$$$")+Craft(CMD_BRIGHT_Purple, "\\  \\______/ \\__| \\_______|\\__|  \\__| ")+Craft(CMD_Cyan, "      \\______/  \\______/ \n")) +
+		Craft(CMD_BRIGHT_Purple, "     \\___|                                         "+Craft(CMD_Cyan, "                   \n"))
 	fmt.Println(str)
 	fmt.Println(Craft(CMD_Red, "\nCreated by: "+Craft(CMD_Purple, "Nigel van Keulen")))
 }
@@ -123,10 +122,10 @@ func main() {
 			return strings.ToLower(ext_confs[i]) < strings.ToLower(ext_confs[j])
 		})
 		for _, conf := range int_confs {
-			fmt.Println(Craft(CMD_BRIGHT_Blue, conf))
+			fmt.Println(Craft(CMD_Cyan, conf))
 		}
 		for _, conf := range ext_confs {
-			fmt.Println(Craft(CMD_BRIGHT_Cyan, conf))
+			fmt.Println(Craft(CMD_Blue, conf))
 		}
 
 	} else if *get_config != "" {
