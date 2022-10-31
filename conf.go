@@ -34,25 +34,16 @@ func (c *Configuration) GetName(name string) string {
 	return name
 }
 
-func (c *Configuration) GetConfig(path string) (*Configuration, error) {
-	conf, err := os.ReadFile(path)
-	if err != nil {
-		c = &Configuration{
-			Host:    "127.0.0.1", // Default host
-			Port:    "8080",      // Default port
-			Encoder: "json",      // Default encoder
-		}
-		if err := c.Save(path); err != nil {
-			return nil, err
-		}
-		return c, nil
-	} else {
-		err = json.Unmarshal(conf, &c)
-		if err != nil {
-			return nil, err
-		}
+func (c *Configuration) SetEncoder(encoder string) error {
+	switch strings.TrimSpace(strings.ToLower(encoder)) {
+	case "json":
+		AppConfig.Encoder = "json"
+	case "gob":
+		AppConfig.Encoder = "gob"
+	default:
+		return fmt.Errorf("invalid encoder type")
 	}
-	return c, nil
+	return nil
 }
 
 func (c *Configuration) Serialize(dir Directory, path string) error {
@@ -97,4 +88,25 @@ func (c *Configuration) Copy(conf Configuration) Configuration {
 		c.Encoder = conf.Encoder
 	}
 	return *c
+}
+
+func (c *Configuration) GetConfig(path string) (*Configuration, error) {
+	conf, err := os.ReadFile(path)
+	if err != nil {
+		c = &Configuration{
+			Host:    "127.0.0.1", // Default host
+			Port:    "8080",      // Default port
+			Encoder: "json",      // Default encoder
+		}
+		if err := c.Save(path); err != nil {
+			return nil, err
+		}
+		return c, nil
+	} else {
+		err = json.Unmarshal(conf, &c)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c, nil
 }

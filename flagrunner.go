@@ -25,14 +25,10 @@ type FlagRunner struct {
 
 func (fr *FlagRunner) Run() {
 	if *fr.encoder != "" {
-		switch strings.TrimSpace(strings.ToLower(*fr.encoder)) {
-		case "json":
-			AppConfig.Encoder = "json"
-		case "gob":
-			AppConfig.Encoder = "gob"
-		default:
-			fmt.Println(Craft(CMD_Red, "Invalid encoder type"))
-			os.Exit(1)
+		err := AppConfig.SetEncoder(*fr.encoder)
+		if err != nil {
+			fmt.Println(err)
+			return
 		}
 	}
 
@@ -91,7 +87,8 @@ func (fr *FlagRunner) Run() {
 		if *fr.proj_name == "" {
 			*fr.proj_name = *fr.get_config
 		}
-		*fr.proj_name = URLOmit(*fr.proj_name)
+		rp_name := URLOmit(*fr.proj_name)
+		fr.proj_name = &rp_name
 		if strings.EqualFold(*fr.proj_name, "static") {
 			*fr.proj_name = strings.Replace(strings.ToLower(*fr.proj_name), "static", "tpl_static", 1)
 			fmt.Println(Craft(CMD_Red, "Warning: The project name contains 'static' which is reserved for static files when serving.\n The project name will be changed to: "+*fr.proj_name))

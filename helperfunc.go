@@ -78,9 +78,9 @@ func Loading(s string, l int) {
 }
 
 func URLOmit(url string) string {
-	var urlomitted = strings.Replace(url, "\\", "/", -1)
-	if strings.Contains(url, "/") {
-		s_url := strings.Split(url, "/")
+	var urlomitted = strings.ReplaceAll(url, "\\", "/")
+	if strings.Contains(urlomitted, "/") {
+		s_url := strings.Split(urlomitted, "/")
 		urlomitted = s_url[len(s_url)-1]
 	}
 	urlomitted = strings.ReplaceAll(urlomitted, "-", "_")

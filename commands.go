@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -169,28 +168,4 @@ func ListInternalConfigs() []string {
 		}
 	}
 	return namelist
-}
-
-func WriteJSONConfig(dir Directory, path string) error {
-	json_data, err := json.MarshalIndent(dir, "", "  ")
-	if err != nil {
-		return err
-	}
-	err = WriteConf(path, json_data)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func WriteGOBConfig(dir Directory, path string) error {
-	gob_data, err := gobEncode(dir)
-	if err != nil {
-		return err
-	}
-	err = WriteConf(path, gob_data)
-	if err != nil {
-		return err
-	}
-	return nil
 }
