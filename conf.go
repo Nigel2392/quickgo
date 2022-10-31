@@ -41,18 +41,18 @@ func (c *Configuration) SetEncoder(encoder string) error {
 	case "gob":
 		AppConfig.Encoder = "gob"
 	default:
-		return fmt.Errorf("invalid encoder type")
+		return fmt.Errorf("invalid serialization method")
 	}
 	return nil
 }
 
 func (c *Configuration) Serialize(dir Directory, path string) error {
 	if c.IsJSON() {
-		return WriteJSONConfig(dir, path+".json")
+		return WriteJSONConfig(dir, c.GetName(path))
 	} else if c.IsGob() {
-		return WriteGOBConfig(dir, path+".gob")
+		return WriteGOBConfig(dir, c.GetName(path))
 	}
-	return fmt.Errorf("invalid encoder")
+	return fmt.Errorf("invalid serialization")
 
 }
 
@@ -62,7 +62,7 @@ func (c *Configuration) Deserialize(data []byte) (Directory, error) {
 	} else if c.IsGob() {
 		return gobDecode(data)
 	} else {
-		return Directory{}, fmt.Errorf("invalid encoder")
+		return Directory{}, fmt.Errorf("invalid deserialization method")
 	}
 }
 

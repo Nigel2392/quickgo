@@ -24,7 +24,7 @@ type FlagRunner struct {
 }
 
 func (fr *FlagRunner) Run() {
-	if *fr.encoder != "" {
+	if *fr.encoder != "" { // Set encoder type
 		err := AppConfig.SetEncoder(*fr.encoder)
 		if err != nil {
 			fmt.Println(err)
@@ -32,38 +32,42 @@ func (fr *FlagRunner) Run() {
 		}
 	}
 
-	if *fr.importpath != "" {
+	if *fr.importpath != "" { // Import configuration
 		_, err := InitProjectConfig(*fr.importpath)
 		if err != nil {
 			panic(err)
 		}
-	} else if *fr.serve {
+	} else if *fr.del_conf { // Delete configuration
+		if *fr.config_name == "" {
+			fmt.Println("No configuration specified, use -use to specify a configuration")
+			return
+		}
+		err := DeleteConfig(*fr.config_name)
+		if err != nil {
+			panic(err)
+		}
+		return
+	} else if *fr.serve { // Serve configuration
 		dirnames := ListInternalConfigs()
 		dirnames = append(dirnames, ListConfigs()...)
 		viewer := NewViewer(dirnames, *fr.raw)
 		if err := viewer.serve(*fr.openBrowser); err != nil {
 			panic(err)
 		}
-	} else if *fr.config_name != "" {
+	} else if *fr.config_name != "" { // Use configuration
 		dir, err := GetDir(*fr.config_name, *fr.proj_name, *fr.raw)
 		if err != nil {
 			panic(err)
 		}
-		if *fr.view_config {
+		if *fr.view_config { // View configuration
 			ListFiles(dir, "")
-			return
-		} else if *fr.del_conf {
-			err := DeleteConfig(*fr.config_name)
-			if err != nil {
-				panic(err)
-			}
 			return
 		}
 		_, err = InitProject(*fr.config_name, *fr.proj_name, dir)
 		if err != nil {
 			panic(err)
 		}
-	} else if *fr.list_configs {
+	} else if *fr.list_configs { // List configurations
 		int_confs := ListInternalConfigs()
 		ext_confs := ListConfigs()
 		sort.Slice(int_confs, func(i, j int) bool {
@@ -72,19 +76,19 @@ func (fr *FlagRunner) Run() {
 		sort.Slice(ext_confs, func(i, j int) bool {
 			return strings.ToLower(ext_confs[i]) < strings.ToLower(ext_confs[j])
 		})
-		for _, conf := range int_confs {
+		for _, conf := range int_confs { // Print internal configurations
 			fmt.Println(Craft(CMD_Purple, conf))
 		}
-		for _, conf := range ext_confs {
+		for _, conf := range ext_confs { // Print external configurations
 			fmt.Println(Craft(CMD_Blue, conf))
 		}
 
-	} else if *fr.get_config != "" {
+	} else if *fr.get_config != "" { // Generate configuration
 		dir, err := GetDirFromPath(*fr.get_config)
 		if err != nil {
 			panic(err)
 		}
-		if *fr.proj_name == "" {
+		if *fr.proj_name == "" { // No project name specified
 			*fr.proj_name = *fr.get_config
 		}
 		rp_name := URLOmit(*fr.proj_name)
@@ -97,9 +101,9 @@ func (fr *FlagRunner) Run() {
 		if err != nil {
 			panic(err)
 		}
-	} else if *fr.location {
+	} else if *fr.location { // Print current directory
 		PrintLocation()
-	} else {
+	} else { // Print help
 		PrintLogo()
 		flag.CommandLine.Usage()
 		os.Exit(1)

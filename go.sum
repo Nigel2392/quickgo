@@ -1,2 +1,4 @@
 github.com/Nigel2392/typeutils v1.0.0 h1:AjG+EqJjmVxMNlcQPGAMGO9oX/ojgVQ/oPxehDS9Lo8=
 github.com/Nigel2392/typeutils v1.0.0/go.mod h1:EImP292xlSaMzezVdG1rL1qppZl9azUBiuBO9m9iBv8=
+github.com/yuin/goldmark v1.5.2 h1:ALmeCk/px5FSm1MAcFBAsVKZjDuMVj8Tm7FFIlMJnqU=
+github.com/yuin/goldmark v1.5.2/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=

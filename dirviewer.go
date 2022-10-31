@@ -3,18 +3,18 @@ package main
 import (
 	"embed"
 	"fmt"
-	"io/fs"
-	"net/http"
 	"strings"
 	"text/template"
 )
 
+//go:embed readme.md
 //go:embed templates/*
 var TemplateFS embed.FS
 
 type Viewer struct {
 	Dirs      []Directory
-	templates []string
+	bases     []string
+	templates map[string]*template.Template
 }
 
 type TemplateData struct {
@@ -29,94 +29,30 @@ type TemplateData struct {
 
 func NewViewer(str_dirs []string, raw bool) *Viewer {
 	dirs := GetDirs(str_dirs, raw)
-	return &Viewer{
+	v := &Viewer{
 		Dirs: dirs,
-		templates: []string{
+		bases: []string{
 			"templates/base.tmpl",
 			"templates/dir_display.tmpl",
 			"templates/go_back.tmpl",
-			"templates/index.tmpl",
 		},
+		templates: make(map[string]*template.Template),
 	}
-}
-
-func (v *Viewer) serve(openBrowser bool) error {
-	http.Handle("/static/", v.getStaticHandler())
-	http.HandleFunc("/favicon.ico", v.iconHandler)
-	http.HandleFunc("/", v.http_DirBrowser)
-	fmt.Println(Craft(CMD_BRIGHT_Blue, "Serving on http://"+AppConfig.Host+":"+AppConfig.Port))
-	// Open browser to localhost:8000
-	if openBrowser {
-		err := OpenBrowser("http://" + AppConfig.Host + ":" + AppConfig.Port)
+	tpls := []string{
+		"index",
+		"readme",
+	}
+	for _, tpl := range tpls {
+		t, err := template.ParseFS(TemplateFS, append(v.bases, fmt.Sprintf("templates/%s.tmpl", tpl))...)
 		if err != nil {
-			fmt.Println(Craft(CMD_BRIGHT_Red, "Error opening browser: "+err.Error()))
+			panic(err)
 		}
+		v.templates[tpl] = t
 	}
-	return http.ListenAndServe(AppConfig.Host+":"+AppConfig.Port, nil)
+	return v
 }
 
-func (v *Viewer) GetIndexTemplate() (*template.Template, error) {
-	return template.ParseFS(TemplateFS, v.templates...)
-}
-
-func (v *Viewer) getStaticHandler() http.Handler {
-	static_fs, _ := fs.Sub(fs.FS(TemplateFS), "templates")
-	return http.StripPrefix("/static/", http.FileServer(http.FS(static_fs)))
-}
-
-func (v *Viewer) iconHandler(w http.ResponseWriter, r *http.Request) {
-	ico, err := TemplateFS.ReadFile("templates/quickgo.png")
-	if err != nil {
-		fmt.Fprint(w, err.Error())
-		return
-	}
-	w.Write(ico)
-}
-
-func (v *Viewer) http_DirBrowser(w http.ResponseWriter, r *http.Request) {
-	var url string = r.URL.Path
-	HTML_TEMPLATE, err := v.GetIndexTemplate()
-	if err != nil {
-		fmt.Fprintf(w, "Error: %s", err.Error())
-	}
-	if url == "/" {
-		dirs := SortDirs(v.Dirs)
-		HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", TemplateData{Dirs: dirs, IsRoot: true})
-		return
-	}
-	url = strings.Trim(url, "/")
-	path := strings.Split(url, "/")
-	var dir Directory
-	for _, l_dir := range v.Dirs {
-		if l_dir.Name == path[0] {
-			dir = l_dir
-			break
-		}
-	}
-	dir, file, file_found, err := v.http_TraverseDir(dir, path[1:])
-	if err != nil {
-		fmt.Fprintf(w, "Error: %s", err)
-		return
-	}
-	if !file_found && len(dir.Children) == 0 && len(dir.Files) == 0 {
-		HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", TemplateData{DirEmpty: true})
-		return
-	}
-	if file_found {
-		if strings.Contains(http.DetectContentType([]byte(file.Content)), "text/plain") {
-			HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", TemplateData{FileContent: file.Content, IsFile: true, Datasize: sizeStr(len(file.Content))})
-			return
-		} else {
-			fmt.Fprint(w, file.Content)
-			return
-		}
-	}
-	dir.Children = SortDirs(dir.Children)
-	dir.Files = SortFiles(dir.Files)
-	HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", TemplateData{Dir: dir, Datasize: dir.SizeStr()})
-}
-
-func (v *Viewer) http_TraverseDir(dir Directory, path []string) (Directory, File, bool, error) {
+func (v *Viewer) TraverseDirFromPath(dir Directory, path []string) (Directory, File, bool, error) {
 	if len(path) == 0 {
 		return dir, File{}, false, nil
 	} else if len(path) > 0 {
@@ -133,7 +69,7 @@ func (v *Viewer) http_TraverseDir(dir Directory, path []string) (Directory, File
 					return child, file, true, nil
 				}
 			}
-			return v.http_TraverseDir(child, path[1:])
+			return v.TraverseDirFromPath(child, path[1:])
 		}
 	}
 	return Directory{}, File{}, false, fmt.Errorf("path not found")

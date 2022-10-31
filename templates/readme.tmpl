@@ -1,0 +1,9 @@
+{{template "base" .}}
+
+{{define "content"}}
+    <div class="box-content">
+        {{template "go_back" .}}
+        <div class="quickgo-file-content">{{.FileContent}}</div>
+    </div>
+{{end}}
+
