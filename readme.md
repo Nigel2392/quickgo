@@ -53,4 +53,4 @@ go install github.com/Nigel2392/quickgo
 - **-raw**
   - Write the raw config as a project, will not replace `$$PROJECT_NAME$$`
 - **-enc**
-        Encoder to use for the project (json/gob). Can also be set in the `config.json`
+  - Encoder to use for the project (json/gob). Can also be set in the `config.json`
