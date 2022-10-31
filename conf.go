@@ -42,13 +42,10 @@ func (c *Configuration) GetConfig(path string) (*Configuration, error) {
 			Port:    "8080",      // Default port
 			Encoder: "json",      // Default encoder
 		}
-		confJSON, err := json.Marshal(c)
-		if err != nil {
+		if err := c.Save(path); err != nil {
 			return nil, err
 		}
-		if err := os.WriteFile(path, confJSON, 0644); err != nil {
-			return nil, err
-		}
+		return c, nil
 	} else {
 		err = json.Unmarshal(conf, &c)
 		if err != nil {
@@ -76,4 +73,28 @@ func (c *Configuration) Deserialize(data []byte) (Directory, error) {
 	} else {
 		return Directory{}, fmt.Errorf("invalid encoder")
 	}
+}
+
+func (c *Configuration) Save(path string) error {
+	confJSON, err := json.MarshalIndent(c, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(path, confJSON, 0644); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Configuration) Copy(conf Configuration) Configuration {
+	if c.Host != conf.Host && conf.Host != "" {
+		c.Host = conf.Host
+	}
+	if c.Port != conf.Port && conf.Port != "" {
+		c.Port = conf.Port
+	}
+	if c.Encoder != conf.Encoder && conf.Encoder != "" {
+		c.Encoder = conf.Encoder
+	}
+	return *c
 }
