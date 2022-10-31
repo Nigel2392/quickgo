@@ -42,6 +42,7 @@ func NewViewer(str_dirs []string, raw bool) *Viewer {
 
 func (v *Viewer) serve(openBrowser bool) error {
 	http.Handle("/static/", v.getStaticHandler())
+	http.HandleFunc("/favicon.ico", v.iconHandler)
 	http.HandleFunc("/", v.http_DirBrowser)
 	fmt.Println(Craft(CMD_BRIGHT_Blue, "Serving on http://"+AppConfig.Host+":"+AppConfig.Port))
 	// Open browser to localhost:8000
@@ -63,10 +64,16 @@ func (v *Viewer) getStaticHandler() http.Handler {
 	return http.StripPrefix("/static/", http.FileServer(http.FS(static_fs)))
 }
 
-func (v *Viewer) http_DirBrowser(w http.ResponseWriter, r *http.Request) {
-	if strings.Contains(r.URL.Path, "favicon") {
+func (v *Viewer) iconHandler(w http.ResponseWriter, r *http.Request) {
+	ico, err := TemplateFS.ReadFile("templates/quickgo.png")
+	if err != nil {
+		fmt.Fprint(w, err.Error())
 		return
 	}
+	w.Write(ico)
+}
+
+func (v *Viewer) http_DirBrowser(w http.ResponseWriter, r *http.Request) {
 	var url string = r.URL.Path
 	HTML_TEMPLATE, err := v.GetIndexTemplate()
 	if err != nil {
