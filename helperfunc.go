@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -19,7 +18,7 @@ import (
 func GetExeDIR() string {
 	exe_file, err := os.Executable()
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	exe_dir := filepath.Dir(exe_file)
 	return exe_dir

@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,12 +20,12 @@ func CreateProject(dir Directory, name string) {
 	for _, file := range dir.Files {
 		f, err := os.Create(name + "\\" + file.Name)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 		defer f.Close()
 		_, err = f.WriteString(file.Content)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 	}
 	os.Chdir(".\\" + name)
@@ -141,7 +140,7 @@ func ListFiles(dir Directory, indent string) {
 func ListConfigs() []string {
 	files, err := os.ReadDir(EXE_DIR + "\\conf\\")
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	var filenames []string
 	for _, f := range files {
@@ -160,7 +159,7 @@ func ListConfigs() []string {
 func ListInternalConfigs() []string {
 	files, err := ConfFS.ReadDir("conf")
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	var namelist []string
 	for _, f := range files {

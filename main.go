@@ -4,7 +4,6 @@ import (
 	"embed"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"sort"
 	"strings"
@@ -61,7 +60,7 @@ func init() {
 	}
 	// Get application configuration
 	if AppConfig, err = AppConfig.GetConfig(EXE_DIR + "\\config.json"); err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 }
 
@@ -103,19 +102,19 @@ func main() {
 	if *importpath != "" {
 		_, err := InitProjectConfig(*importpath)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 	} else if *serve {
 		dirnames := ListInternalConfigs()
 		dirnames = append(dirnames, ListConfigs()...)
 		viewer := NewViewer(dirnames, *RAW)
 		if err := viewer.serve(*openBrowser); err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 	} else if *config_name != "" {
 		dir, err := GetDir(*config_name, *proj_name, *RAW)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 		if *view_config {
 			ListFiles(dir, "")
@@ -123,13 +122,13 @@ func main() {
 		} else if *del_conf {
 			err := DeleteConfig(*config_name)
 			if err != nil {
-				log.Fatal(err)
+				panic(err)
 			}
 			return
 		}
 		_, err = InitProject(*config_name, *proj_name, dir)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 	} else if *list_configs {
 		int_confs := ListInternalConfigs()
@@ -150,7 +149,7 @@ func main() {
 	} else if *get_config != "" {
 		dir, err := GetDirFromPath(*get_config)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 		if *proj_name == "" {
 			*proj_name = *get_config
@@ -162,7 +161,7 @@ func main() {
 		}
 		err = AppConfig.Serialize(dir, EXE_DIR+"\\conf\\"+*proj_name)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 	} else if *location {
 		PrintLocation()
