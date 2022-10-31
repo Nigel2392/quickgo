@@ -5,8 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"sort"
-	"strings"
 )
 
 var (
@@ -65,19 +63,19 @@ func init() {
 }
 
 func main() {
-
-	importpath := flag.String("import", "", "Path of the JSON/GOB file to be imported")
-	get_config := flag.String("get", "", "Get the JSON config of the project")
-	config_name := flag.String("use", "", "Path of the JSON file to use for creating templates")
-	list_configs := flag.Bool("l", false, "List all the available configs")
-	proj_name := flag.String("n", "", "Name of the project to be created")
-	view_config := flag.Bool("v", false, "View the config of the project")
-	location := flag.Bool("loc", false, "Location of the executable")
-	del_conf := flag.Bool("del", false, "Delete a config")
-	RAW := flag.Bool("raw", false, "Output raw project from json")
-	serve := flag.Bool("serve", false, "Serve the project files over http to preview (optional -o)")
-	openBrowser := flag.Bool("o", false, "Open the browser after serving the project")
-	encoder := flag.String("enc", "", "Encoder to use for the project (json/gob). Can also be set in the config.json")
+	fr := FlagRunner{}
+	fr.importpath = flag.String("import", "", "Path of the JSON/GOB file to be imported")
+	fr.get_config = flag.String("get", "", "Get the JSON config of the project")
+	fr.config_name = flag.String("use", "", "Path of the JSON file to use for creating templates")
+	fr.list_configs = flag.Bool("l", false, "List all the available configs")
+	fr.proj_name = flag.String("n", "", "Name of the project to be created")
+	fr.view_config = flag.Bool("v", false, "View the config of the project")
+	fr.location = flag.Bool("loc", false, "Location of the executable")
+	fr.del_conf = flag.Bool("del", false, "Delete a config")
+	fr.raw = flag.Bool("raw", false, "Output raw project from json")
+	fr.serve = flag.Bool("serve", false, "Serve the project files over http to preview (optional -o)")
+	fr.openBrowser = flag.Bool("o", false, "Open the browser after serving the project")
+	fr.encoder = flag.String("enc", "", "Encoder to use for the project (json/gob). Can also be set in the config.json")
 
 	if len(os.Args) == 1 {
 		PrintLogo()
@@ -86,88 +84,5 @@ func main() {
 	}
 
 	flag.Parse()
-
-	if *encoder != "" {
-		switch strings.TrimSpace(strings.ToLower(*encoder)) {
-		case "json":
-			AppConfig.Encoder = "json"
-		case "gob":
-			AppConfig.Encoder = "gob"
-		default:
-			fmt.Println(Craft(CMD_Red, "Invalid encoder type"))
-			os.Exit(1)
-		}
-	}
-
-	if *importpath != "" {
-		_, err := InitProjectConfig(*importpath)
-		if err != nil {
-			panic(err)
-		}
-	} else if *serve {
-		dirnames := ListInternalConfigs()
-		dirnames = append(dirnames, ListConfigs()...)
-		viewer := NewViewer(dirnames, *RAW)
-		if err := viewer.serve(*openBrowser); err != nil {
-			panic(err)
-		}
-	} else if *config_name != "" {
-		dir, err := GetDir(*config_name, *proj_name, *RAW)
-		if err != nil {
-			panic(err)
-		}
-		if *view_config {
-			ListFiles(dir, "")
-			return
-		} else if *del_conf {
-			err := DeleteConfig(*config_name)
-			if err != nil {
-				panic(err)
-			}
-			return
-		}
-		_, err = InitProject(*config_name, *proj_name, dir)
-		if err != nil {
-			panic(err)
-		}
-	} else if *list_configs {
-		int_confs := ListInternalConfigs()
-		ext_confs := ListConfigs()
-		sort.Slice(int_confs, func(i, j int) bool {
-			return strings.ToLower(int_confs[i]) < strings.ToLower(int_confs[j])
-		})
-		sort.Slice(ext_confs, func(i, j int) bool {
-			return strings.ToLower(ext_confs[i]) < strings.ToLower(ext_confs[j])
-		})
-		for _, conf := range int_confs {
-			fmt.Println(Craft(CMD_Purple, conf))
-		}
-		for _, conf := range ext_confs {
-			fmt.Println(Craft(CMD_Blue, conf))
-		}
-
-	} else if *get_config != "" {
-		dir, err := GetDirFromPath(*get_config)
-		if err != nil {
-			panic(err)
-		}
-		if *proj_name == "" {
-			*proj_name = *get_config
-		}
-		*proj_name = URLOmit(*proj_name)
-		if strings.EqualFold(*proj_name, "static") {
-			*proj_name = strings.Replace(strings.ToLower(*proj_name), "static", "tpl_static", 1)
-			fmt.Println(Craft(CMD_Red, "Warning: The project name contains 'static' which is reserved for static files when serving.\n The project name will be changed to: "+*proj_name))
-		}
-		err = AppConfig.Serialize(dir, EXE_DIR+"\\conf\\"+*proj_name)
-		if err != nil {
-			panic(err)
-		}
-	} else if *location {
-		PrintLocation()
-	} else {
-		PrintLogo()
-		flag.CommandLine.Usage()
-		os.Exit(1)
-	}
+	fr.Run()
 }
