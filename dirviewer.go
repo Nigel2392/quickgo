@@ -27,8 +27,8 @@ type TemplateData struct {
 	Datasize    string
 }
 
-func NewViewer(str_dirs []string) *Viewer {
-	dirs := GetDirs(str_dirs)
+func NewViewer(str_dirs []string, raw bool) *Viewer {
+	dirs := GetDirs(str_dirs, raw)
 	return &Viewer{
 		Dirs: dirs,
 		templates: []string{

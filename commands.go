@@ -38,11 +38,7 @@ func CreateProject(dir Directory, name string) {
 }
 
 func DeleteConfig(name string) error {
-	if strings.ToLower(AppConfig.Encoder) == "json" {
-		name = name + ".json"
-	} else if strings.ToLower(AppConfig.Encoder) == "gob" {
-		name = name + ".gob"
-	}
+	name = AppConfig.GetName(name)
 	return os.Remove(EXE_DIR + "\\conf\\" + name)
 }
 
@@ -67,16 +63,20 @@ func InitProject(name string, proj_name string, dir Directory) (Directory, error
 }
 
 func InitProjectConfig(path string) (Directory, error) {
+	var dir Directory
+	var err error
+
 	file, err := os.ReadFile(path)
 	if err != nil {
 		return Directory{}, err
 	}
-	dir, err := FileToDir(file)
+	dir, err = AppConfig.Deserialize(file)
 	if err != nil {
 		return Directory{}, err
 	}
 	// write file to current directory
-	err = os.WriteFile(EXE_DIR+"\\conf\\", file, 0644)
+	fname := AppConfig.GetName(URLOmit(path))
+	err = os.WriteFile(EXE_DIR+"\\conf\\"+fname, file, 0644)
 	if err != nil {
 		return Directory{}, err
 	}
@@ -88,7 +88,7 @@ func InitProjectConfig(path string) (Directory, error) {
 	return dir, nil
 }
 
-func GetConfFromDir(path string) (Directory, error) {
+func GetDirFromPath(path string) (Directory, error) {
 	var dir Directory
 	dir.Name = filepath.Base(path)
 	files, err := os.ReadDir(path)
@@ -97,7 +97,7 @@ func GetConfFromDir(path string) (Directory, error) {
 	}
 	for _, f := range files {
 		if f.IsDir() {
-			child, err := GetConfFromDir(path + "\\" + f.Name())
+			child, err := GetDirFromPath(path + "\\" + f.Name())
 			if err != nil {
 				return Directory{}, err
 			}
@@ -107,18 +107,13 @@ func GetConfFromDir(path string) (Directory, error) {
 			if err != nil {
 				return Directory{}, err
 			}
-			file_data := string(file)
-			dir.Files = append(dir.Files, File{Name: f.Name(), Content: file_data})
+			dir.Files = append(dir.Files, File{Name: f.Name(), Content: string(file)})
 		}
 	}
 	return dir, nil
 }
-func GetDir(name string, project_name string) (Directory, error) {
-	if strings.ToLower(AppConfig.Encoder) == "json" {
-		name = name + ".json"
-	} else if strings.ToLower(AppConfig.Encoder) == "gob" {
-		name = name + ".gob"
-	}
+func GetDir(name string, project_name string, raw bool) (Directory, error) {
+	name = AppConfig.GetName(name)
 	file, err := os.ReadFile(EXE_DIR + "\\conf\\" + name)
 	if err != nil {
 		file, err = ConfFS.ReadFile("conf/" + name)
@@ -126,16 +121,9 @@ func GetDir(name string, project_name string) (Directory, error) {
 			return Directory{}, err
 		}
 	}
-	if !*RAW && strings.ToLower(AppConfig.Encoder) == "json" {
-		if project_name == "" {
-			project_name = name
-		}
-		file = ReplaceNames(file, project_name)
-	}
-	dir, err := DeSerializeDir(file)
-	if strings.ToLower(AppConfig.Encoder) == "gob" {
-		dir := RenameDirData(dir, project_name)
-		return dir, nil
+	dir, err := AppConfig.Deserialize(file)
+	if !raw {
+		dir = RenameDirData(dir, project_name)
 	}
 	return dir, err
 }
@@ -161,7 +149,7 @@ func ListConfigs() []string {
 		name_ext := strings.Split(name, ".")
 		if len(name) > 1 {
 			name = name_ext[0]
-			if strings.EqualFold(name_ext[len(name_ext)-1], strings.ToLower(AppConfig.Encoder)) {
+			if AppConfig.IsEncType(name_ext[len(name_ext)-1]) {
 				filenames = append(filenames, name)
 			}
 		}
@@ -177,22 +165,13 @@ func ListInternalConfigs() []string {
 	var namelist []string
 	for _, f := range files {
 		name_ext := strings.Split(f.Name(), ".")
-		if strings.EqualFold(name_ext[len(name_ext)-1], strings.ToLower(AppConfig.Encoder)) {
+		if AppConfig.IsEncType(name_ext[len(name_ext)-1]) {
 			namelist = append(namelist, name_ext[0])
 		}
 	}
 	return namelist
 }
 
-func WriteConfig(dir Directory, path string) error {
-	if strings.ToLower(AppConfig.Encoder) == "json" {
-		return WriteJSONConfig(dir, path+".json")
-	} else if strings.ToLower(AppConfig.Encoder) == "gob" {
-		return WriteGOBConfig(dir, path+".gob")
-	}
-	return fmt.Errorf("invalid encoder")
-
-}
 func WriteJSONConfig(dir Directory, path string) error {
 	json_data, err := json.MarshalIndent(dir, "", "  ")
 	if err != nil {

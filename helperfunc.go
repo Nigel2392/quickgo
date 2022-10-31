@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/gob"
 	"fmt"
 	"log"
 	"os"
@@ -80,13 +79,9 @@ func Loading(s string, l int) {
 }
 
 func URLOmit(url string) string {
-	var urlomitted = url
+	var urlomitted = strings.Replace(url, "\\", "/", -1)
 	if strings.Contains(url, "/") {
 		s_url := strings.Split(url, "/")
-		urlomitted = s_url[len(s_url)-1]
-	}
-	if strings.Contains(url, "\\") {
-		s_url := strings.Split(url, "\\")
 		urlomitted = s_url[len(s_url)-1]
 	}
 	urlomitted = strings.ReplaceAll(urlomitted, "-", "_")
@@ -94,7 +89,7 @@ func URLOmit(url string) string {
 	urlomitted = strings.ReplaceAll(urlomitted, ".", "_")
 	return urlomitted
 }
-func sizeStr[T int | int16 | int32 | int64](size T) string {
+func sizeStr[T int | int16 | int32 | int64 | float32 | float64](size T) string {
 	f_size := float64(size)
 	if f_size < 1024 {
 		return fmt.Sprintf("%d b", int(f_size))
@@ -115,58 +110,29 @@ func WriteConf(path string, data []byte) error {
 	// Check if the file exists
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		// Create the file
-		err = os.WriteFile(path, data, 0644)
-		if err != nil {
+		if err = os.WriteFile(path, data, 0644); err != nil {
 			return err
 		}
 	} else {
 		// Delete the file
 		answer := RepeatAsk("The file already exists, do you want to overwrite it? (y/n): ", []string{"y", "n"})
 		if answer == "y" {
-			err := os.WriteFile(path, data, 0644)
-			if err != nil {
-				return err
-			}
+			return os.WriteFile(path, data, 0644)
 		} else if answer == "n" {
 			answer = RepeatAsk("Do you want to change the name of the file? (y/n): ", []string{"y", "n"})
 			if answer == "y" {
+				// Ask for the new name
 				name := typeutils.Ask("Enter the name of the file: ")
-				if strings.ToLower(AppConfig.Encoder) == "json" {
-					name = name + ".json"
-				} else if strings.ToLower(AppConfig.Encoder) == "gob" {
-					name = name + ".gob"
-				}
-				err = os.WriteFile(EXE_DIR+"\\conf\\"+name, data, 0644)
-				if err != nil {
-					return err
-				}
+				// Make the name path safe
+				name = URLOmit(AppConfig.GetName(name))
+				// Write the file by recursion
+				return WriteConf(EXE_DIR+"\\conf\\"+name, data)
 			} else if answer == "n" {
-				os.Exit(1)
+				return fmt.Errorf("operation canceled by the user")
 			}
 		}
 	}
 	return nil
-}
-
-func gobEncode(dir Directory) ([]byte, error) {
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	err := enc.Encode(dir)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
-func gobDecode(data []byte) (Directory, error) {
-	var dir Directory
-	buf := bytes.NewBuffer(data)
-	dec := gob.NewDecoder(buf)
-	err := dec.Decode(&dir)
-	if err != nil {
-		return Directory{}, err
-	}
-	return dir, nil
 }
 
 func ReplaceNames(data []byte, name string) []byte {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -48,16 +47,7 @@ func (d *Directory) SizeStr() string {
 	return sizeStr(size)
 }
 
-func FileToDir(file []byte) (Directory, error) {
-	var dir Directory
-	err := json.Unmarshal(file, &dir)
-	if err != nil {
-		return Directory{}, err
-	}
-	return dir, nil
-}
-
-func GetDirs(str_dirs []string) []Directory {
+func GetDirs(str_dirs []string, raw bool) []Directory {
 	var dirs []Directory
 	var wg sync.WaitGroup
 	var out_mu sync.Mutex
@@ -68,7 +58,7 @@ func GetDirs(str_dirs []string) []Directory {
 			defer wg.Done()
 			proj_name := strings.SplitN(dirname, ".", 2)[0]
 			proj_name = strings.ToUpper(proj_name)
-			dir, err := GetDir(dirname, proj_name)
+			dir, err := GetDir(dirname, proj_name, raw)
 			if err != nil {
 				fmt.Println(err)
 				return
@@ -81,16 +71,6 @@ func GetDirs(str_dirs []string) []Directory {
 	wg.Wait()
 
 	return dirs
-}
-
-func DeSerializeDir(data []byte) (Directory, error) {
-	if strings.ToLower(AppConfig.Encoder) == "json" {
-		return FileToDir(data)
-	} else if strings.ToLower(AppConfig.Encoder) == "gob" {
-		return gobDecode(data)
-	} else {
-		return Directory{}, fmt.Errorf("invalid encoder")
-	}
 }
 
 func RenameDirData(dir Directory, project_name string) Directory {
