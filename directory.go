@@ -73,6 +73,29 @@ func GetDirs(str_dirs []string, raw bool) []Directory {
 	return dirs
 }
 
+func TraverseDirFromPath(dir Directory, path []string) (Directory, File, bool, error) {
+	if len(path) == 0 {
+		return dir, File{}, false, nil
+	} else if len(path) > 0 {
+		for _, file := range dir.Files {
+			if strings.EqualFold(file.Name, path[0]) {
+				return dir, file, true, nil
+			}
+		}
+	}
+	for _, child := range dir.Children {
+		if strings.EqualFold(child.Name, path[0]) {
+			for _, file := range child.Files {
+				if strings.EqualFold(file.Name, path[0]) {
+					return child, file, true, nil
+				}
+			}
+			return TraverseDirFromPath(child, path[1:])
+		}
+	}
+	return Directory{}, File{}, false, fmt.Errorf("path not found")
+}
+
 func RenameDirData(dir Directory, project_name string) Directory {
 	dir.Name = ReplaceNamesString(dir.Name, project_name)
 	for i, file := range dir.Files {

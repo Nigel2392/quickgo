@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +14,9 @@ import (
 	"time"
 
 	"github.com/Nigel2392/typeutils"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
 )
 
 func GetExeDIR() string {
@@ -134,6 +138,16 @@ func WriteConf(path string, data []byte) error {
 	return nil
 }
 
+func GetDepth(dirs []Directory) int {
+	depth := 1
+	for _, dir := range dirs {
+		if len(dir.Children) > 0 {
+			depth = int(math.Max(float64(depth), float64(GetDepth(dir.Children))))
+		}
+	}
+	return depth + 1
+}
+
 func ReplaceNames(data []byte, name string) []byte {
 	name_urlomitted := URLOmit(name)
 	data = bytes.Replace(data, []byte("$$PROJECT_NAME$$"), []byte(name), -1)
@@ -144,4 +158,18 @@ func ReplaceNames(data []byte, name string) []byte {
 
 func ReplaceNamesString(data string, name string) string {
 	return string(ReplaceNames([]byte(data), name))
+}
+
+func Markdownify(data []byte) (string, error) {
+	md := goldmark.New(
+		goldmark.WithExtensions(extension.GFM, extension.DefinitionList, extension.GFM),
+		goldmark.WithParserOptions(
+			parser.WithAutoHeadingID(),
+		),
+	)
+	var buf bytes.Buffer
+	if err := md.Convert(data, &buf); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }

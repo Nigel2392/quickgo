@@ -3,7 +3,6 @@ package main
 import (
 	"embed"
 	"fmt"
-	"strings"
 	"text/template"
 )
 
@@ -52,25 +51,14 @@ func NewViewer(str_dirs []string, raw bool) *Viewer {
 	return v
 }
 
-func (v *Viewer) TraverseDirFromPath(dir Directory, path []string) (Directory, File, bool, error) {
+func FindDir(dir *Directory, path []string) (*Directory, error) {
 	if len(path) == 0 {
-		return dir, File{}, false, nil
-	} else if len(path) > 0 {
-		for _, file := range dir.Files {
-			if strings.EqualFold(file.Name, path[0]) {
-				return dir, file, true, nil
-			}
-		}
+		return dir, nil
 	}
 	for _, child := range dir.Children {
-		if strings.EqualFold(child.Name, path[0]) {
-			for _, file := range child.Files {
-				if strings.EqualFold(file.Name, path[0]) {
-					return child, file, true, nil
-				}
-			}
-			return v.TraverseDirFromPath(child, path[1:])
+		if child.Name == path[0] {
+			return FindDir(&child, path[1:])
 		}
 	}
-	return Directory{}, File{}, false, fmt.Errorf("path not found")
+	return nil, fmt.Errorf("Directory not found")
 }
