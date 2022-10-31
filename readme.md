@@ -31,6 +31,8 @@ go install github.com/Nigel2392/quickgo
 ```
 - **-serve**
   - Serve the project files in the browser.
+  - Can be used to serve the project over the web when IP is configured accordingly in the `config.json`.
+  - 
 - **-del**
   - Delete a config (usage: quickgo -use (config name) -del)
 - **-get**
@@ -46,6 +48,9 @@ go install github.com/Nigel2392/quickgo
     - Replaces the `$$PROJECT_NAME$$` in the template with the name of the project.
     - Replaces the `$$PROJECT_NAME; OMITURL$$` in the template with the name of the project, assuming the name is the last part of the URL passsed into -n
       - This is useful when creating Golang packages
+      - Example: 
+        - github.com/Nigel2392/quickgo -> quickgo
+        - www.github.com -> www_github_com
 - **-use**
   - Path of the JSON file to use for creating templates (usage: quickgo -use (config name))
 - **-v**
