@@ -6,6 +6,10 @@ import (
 	"sync"
 )
 
+type FileSystem interface {
+	GetName() string
+}
+
 type File struct {
 	Name    string `json:"name"`
 	Content string `json:"content"`
@@ -16,10 +20,18 @@ func (f *File) SizeStr() string {
 	return sizeStr(size)
 }
 
+func (f *File) GetName() string {
+	return f.Name
+}
+
 type Directory struct {
 	Name     string      `json:"name"`
 	Children []Directory `json:"directory"`
 	Files    []File      `json:"files"`
+}
+
+func (d *Directory) GetName() string {
+	return d.Name
 }
 
 func (d *Directory) GetSortedFiles() []Directory {

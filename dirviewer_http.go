@@ -44,6 +44,7 @@ func (v *Viewer) iconHandler(w http.ResponseWriter, r *http.Request) {
 
 func (v *Viewer) SitemapHandler(w http.ResponseWriter, r *http.Request) {
 	// Get max depth to calculate the lowest possible priority ahead of time.
+	// This is to make sure the priority does not go below 0.
 	depth := GetDepth(v.Dirs)
 	minus := float32(1) / float32(depth)
 	// Set content type to xml
