@@ -1,5 +1,5 @@
+![quickgo](https://user-images.githubusercontent.com/91429854/199236480-a1e16f40-88c9-448a-a852-f982980f562b.png)
 # Why QuickGo?
-
 - Quickgo is a simple and easy to use golang command line tool for creating projects of any language.
 - Easily import your existing templates into QuickGo with `quickgo -get (filename)`.
 - Share your templates, and import them with `quickgo -import (filename.json)`.
