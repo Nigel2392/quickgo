@@ -153,6 +153,8 @@ func ReplaceNames(data []byte, name string) []byte {
 	data = bytes.Replace(data, []byte("$$PROJECT_NAME$$"), []byte(name), -1)
 	var re = regexp.MustCompile(`\$\$PROJECT_NAME\s*;\s*OMITURL\$\$`)
 	data = re.ReplaceAll(data, []byte(name_urlomitted))
+	re = regexp.MustCompile(`\$\$PROJECT_NAME\s*;\s*URLOMIT\$\$`)
+	data = re.ReplaceAll(data, []byte(name_urlomitted))
 	return data
 }
 

@@ -95,7 +95,7 @@ func (fr *FlagRunner) Run() {
 		fr.proj_name = &rp_name
 		if strings.EqualFold(*fr.proj_name, "static") {
 			*fr.proj_name = strings.Replace(strings.ToLower(*fr.proj_name), "static", "tpl_static", 1)
-			fmt.Println(Craft(CMD_Red, "Warning: The project name contains 'static' which is reserved for static files when serving.\n The project name will be changed to: "+*fr.proj_name))
+			fmt.Println(Craft(CMD_Red, "Warning: The project name equals 'static' which is reserved for static files when serving.\n The project name will be changed to: "+*fr.proj_name))
 		}
 		err = AppConfig.Serialize(dir, EXE_DIR+"\\conf\\"+*fr.proj_name)
 		if err != nil {
