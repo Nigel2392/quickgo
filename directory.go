@@ -65,7 +65,7 @@ func GetDirs(str_dirs []string, raw bool) []Directory {
 	var out_mu sync.Mutex
 
 	wg.Add(len(str_dirs))
-	for _, dir := range str_dirs {
+	for _, str_dir := range str_dirs {
 		go func(dirname string, wg *sync.WaitGroup, mu *sync.Mutex) {
 			defer wg.Done()
 			proj_name := strings.SplitN(dirname, ".", 2)[0]
@@ -76,9 +76,10 @@ func GetDirs(str_dirs []string, raw bool) []Directory {
 				return
 			}
 			mu.Lock()
+			dir.Name = dirname
 			dirs = append(dirs, dir)
 			mu.Unlock()
-		}(dir, &wg, &out_mu)
+		}(str_dir, &wg, &out_mu)
 	}
 	wg.Wait()
 
