@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-var (
+const (
 	CMD_Bold          = "\033[1m"
 	CMD_Black         = "\033[30m"
 	CMD_BRIGHT_Blue   = "\033[34;1m"

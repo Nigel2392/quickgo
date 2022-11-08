@@ -74,7 +74,7 @@ func (v *Viewer) readmeHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	tpl.ExecuteTemplate(w, "readme.tmpl", TemplateData{FileContent: md})
+	tpl.ExecuteTemplate(w, "readme.tmpl", &TemplateData{ShowPreview: showPreview(r), Raw: IsRaw(r), FileContent: md})
 }
 
 func (v *Viewer) directoryHandler(w http.ResponseWriter, r *http.Request) {
@@ -86,7 +86,7 @@ func (v *Viewer) directoryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if url == "/" {
 		dirs := SortDirs(v.Dirs)
-		HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", TemplateData{Dirs: dirs, IsRoot: true})
+		HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", &TemplateData{ShowPreview: showPreview(r), Raw: IsRaw(r), Dirs: dirs, IsRoot: true})
 		return
 	}
 	url = strings.Trim(url, "/")
@@ -104,7 +104,7 @@ func (v *Viewer) directoryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !file_found && len(n_dir.Children) == 0 && len(n_dir.Files) == 0 {
-		HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", TemplateData{DirEmpty: true})
+		HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", &TemplateData{ShowPreview: showPreview(r), Raw: IsRaw(r), DirEmpty: true})
 		return
 	}
 	if file_found {
@@ -118,7 +118,7 @@ func (v *Viewer) directoryHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
-			HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", TemplateData{FileContent: content, IsFile: true, Datasize: sizeStr(len(file.Content))})
+			HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", &TemplateData{ShowPreview: showPreview(r), Raw: IsRaw(r), FileContent: content, IsFile: true, Datasize: sizeStr(len(file.Content))})
 			return
 		} else {
 			w.Header().Set("Content-Type", http.DetectContentType([]byte(file.Content)))
@@ -128,7 +128,7 @@ func (v *Viewer) directoryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	n_dir.Children = SortDirs(n_dir.Children)
 	n_dir.Files = SortFiles(n_dir.Files)
-	HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", TemplateData{Dir: n_dir, Datasize: n_dir.SizeStr()})
+	HTML_TEMPLATE.ExecuteTemplate(w, "index.tmpl", &TemplateData{ShowPreview: showPreview(r), Raw: IsRaw(r), Dir: n_dir, Datasize: n_dir.SizeStr()})
 }
 
 // Generate a sitemap from directories
@@ -151,4 +151,12 @@ func SitemapWriter(w http.ResponseWriter, dirs []Directory, margin int, priority
 </url>`, path+dir.Name+"/"+file.Name+"/", sizeStr(len(file.Content)), priority)
 		}
 	}
+}
+
+func IsRaw(r *http.Request) bool {
+	return strings.EqualFold(r.URL.Query().Get("raw"), "true")
+}
+
+func showPreview(r *http.Request) bool {
+	return strings.EqualFold(r.URL.Query().Get("preview"), "true")
 }

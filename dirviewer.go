@@ -19,11 +19,14 @@ type Viewer struct {
 type TemplateData struct {
 	Dirs        []Directory
 	Dir         Directory
-	DirEmpty    bool
 	FileContent string
+	Datasize    string
+	DirEmpty    bool
 	IsRoot      bool
 	IsFile      bool
-	Datasize    string
+	Raw         bool
+	ShowPreview bool
+	Name        string
 }
 
 func NewViewer(str_dirs []string, raw bool) *Viewer {
@@ -32,7 +35,6 @@ func NewViewer(str_dirs []string, raw bool) *Viewer {
 		Dirs: dirs,
 		bases: []string{
 			"templates/base.tmpl",
-			"templates/dir_display.tmpl",
 			"templates/go_back.tmpl",
 		},
 		templates: make(map[string]*template.Template),

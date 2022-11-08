@@ -51,6 +51,19 @@ body{
     background: #555; 
 }
 
+
+.description {
+  display:none;
+  position:fixed;
+  border:1px solid #000;
+  width:60vw;
+  height:100vh;
+  top:0;
+  right:0;
+}
+
+
+
 .quickgo-logo{
     margin-left:20px;
 }
