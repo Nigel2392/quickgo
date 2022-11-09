@@ -156,6 +156,7 @@ body{
 .quickgo-datasize{
   color: #6c757d !important;
   float:right;
+  margin-right:10px;
 }
 .quickgo-dir{
     color: #888;
@@ -797,4 +798,157 @@ code{
             user-select: none; /* Non-prefixed version, currently
                                   supported by Chrome, Edge, Opera and Firefox */
 }
-  
+.toggle{
+  --uiToggleSize: var(--toggleSize, 1.25rem);
+  --uiToggleBorderWidth: var(--toggleBorderWidth, 2px);
+  --uiToggleColor: var(--toggleColor, #9200ff);
+
+  display: var(--toggleDisplay, inline-flex);
+  position: relative;
+}
+
+.toggle__input{
+  /*
+  The pattern by Sara Soueidan https://www.sarasoueidan.com/blog/inclusively-hiding-and-styling-checkboxes-and-radio-buttons/
+  */
+  width: var(--uiToggleSize);
+  height: var(--uiToggleSize);
+  opacity: 0;
+
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+}
+
+/*
+1. Calculation of the gap for the custom checkbox
+*/
+
+.toggle__label{
+  display: inline-flex;
+  min-height: var(--uiToggleSize);
+  padding-left: calc(var(--uiToggleSize) + var(--toggleIndent, .4em));
+}
+
+.toggle__input:not(:disabled) ~ .toggle__label{
+  cursor: pointer;
+}
+
+/*
+1. Ems helps to calculate size of the checkbox
+*/
+
+.toggle__label::after{
+  content: "";
+  box-sizing: border-box;  
+  width: 1em;
+  height: 1em;
+  font-size: var(--uiToggleSize); /* 1 */
+
+  background-color: transparent;
+  border: var(--uiToggleBorderWidth) solid var(--uiToggleColor);
+
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+}
+
+.toggle__input:checked ~ .toggle__label::after{
+  background-color: transparent;
+}
+
+.toggle__text{
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+/*
+The arrow size and position depends from sizes of square because I needed an arrow correct positioning from the top left corner of the element toggle
+
+1. Ems helps to calculate size and position of the arrow
+*/
+
+.toggle__label::before{
+  content: "";
+  width: 0;
+  height: 0;
+  font-size: var(--uiToggleSize); /* 1 */
+
+  border-left-width: 0;
+  border-bottom-width: 0;
+  border-left-style: solid;
+  border-bottom-style: solid;
+  border-color: var(--toggleArrowColor, #9200ff);
+
+  position: absolute;
+  top: .5428em;
+  left: .25em;
+  z-index: 3;
+
+  transform-origin: left top;
+  transform: rotate(-40deg) skew(10deg);
+}
+
+.toggle__input:checked ~ .toggle__label::before{
+  --uiToggleArrowWidth: var(--toggleArrowWidth, 2px);
+
+  width: .4em;
+  height: .2em;
+  border-left-width: var(--uiToggleArrowWidth);
+  border-bottom-width: var(--uiToggleArrowWidth);
+}
+
+/*
+States
+*/
+
+/* focus state */
+
+.toggle:focus-within{
+  outline: var(--toggleOutlineWidthFocus, 3px) solid var(--toggleOutlineColorFocus, currentColor);
+  outline-offset: var(--toggleOutlineOffsetFocus, 5px);
+}
+
+/* disabled state */
+
+.toggle__input:disabled ~ .toggle__label{
+  opacity: var(--toggleOpacityDisabled, .24);
+  cursor: var(--toggleCursorDisabled, not-allowed);
+  user-select: none;
+}
+
+/*
+=====
+PRESENTATION STYLES
+=====
+*/
+
+/* 
+The demo skin
+*/
+
+.toggle__label::after{
+  border-radius: var(--toggleBorderRadius, 2px);
+}
+
+/* 
+The animation of switching states
+*/
+
+.toggle__input:not(:disabled) ~ .toggle__label::before{
+  will-change: width, height;
+  opacity: 0;
+}
+
+.toggle__input:not(:disabled):checked ~ .toggle__label::before{
+  opacity: 1;
+  transition: opacity .1s ease-out .15s, width .1s ease-out .3s, height .1s ease-out .2s;
+}
+
+.toggle__input:not(:disabled) ~ .toggle__label::after{
+  will-change: background-color;
+  transition: background-color .15s ease-out;
+}
+

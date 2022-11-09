@@ -35,7 +35,6 @@ func NewViewer(str_dirs []string, raw bool) *Viewer {
 		Dirs: dirs,
 		bases: []string{
 			"templates/base.tmpl",
-			"templates/go_back.tmpl",
 		},
 		templates: make(map[string]*template.Template),
 	}

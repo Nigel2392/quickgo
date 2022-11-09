@@ -50,8 +50,14 @@
                         <a class="nav-item nav-link" href="/">Root</a>
                         <a class="nav-item nav-link" href="/readme.md">Readme</a>
                         <span class="nav-item nav-link">
-                            <label for="preview_checkbox">Preview?</label>
-                            <input type="checkbox" name="preview_checkbox" {{if .ShowPreview}}checked{{end}} id="preview_checkbox" placeholder="Preview?" class="form-check">
+                            <div class="page__toggle">
+                                <label class="toggle">
+                                    <input class="toggle__input" name="preview_checkbox" {{if .ShowPreview}}checked{{end}} id="preview_checkbox" placeholder="Preview?" type="checkbox">
+                                    <span class="toggle__label">
+                                        <span class="toggle__text">Preview?</span>
+                                    </span>
+                                </label>
+                            </div>
                         </span>
                     </div>
                 </div>
