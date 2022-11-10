@@ -40,7 +40,7 @@ func DeleteConfig(name string) error {
 	return os.Remove(EXE_DIR + "\\conf\\" + name)
 }
 
-func InitProject(name string, proj_name string, dir Directory) (Directory, error) {
+func InitProject(proj_name string, dir Directory) (Directory, error) {
 	Loading("Creating project from "+dir.Name, 3)
 	if proj_name == "" {
 		proj_name = dir.Name
@@ -56,6 +56,9 @@ func InitProject(name string, proj_name string, dir Directory) (Directory, error
 	}
 	os.Mkdir(path+"\\"+proj_name, 0755)
 	// os.Chdir(path + "\\" + proj_name)
+	if proj_name == "" {
+		proj_name = dir.Name
+	}
 	CreateProject(dir, proj_name)
 	return dir, nil
 }

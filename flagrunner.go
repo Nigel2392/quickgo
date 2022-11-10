@@ -63,7 +63,7 @@ func (fr *FlagRunner) Run() {
 			ListFiles(dir, "")
 			return
 		}
-		_, err = InitProject(*fr.config_name, *fr.proj_name, dir)
+		_, err = InitProject(*fr.proj_name, dir)
 		if err != nil {
 			panic(err)
 		}

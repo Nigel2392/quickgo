@@ -110,6 +110,9 @@ func TraverseDirFromPath(dir Directory, path []string) (Directory, File, bool, e
 }
 
 func RenameDirData(dir Directory, project_name string) Directory {
+	if project_name == "" {
+		project_name = dir.Name
+	}
 	dir.Name = ReplaceNamesString(dir.Name, project_name)
 	for i, file := range dir.Files {
 		dir.Files[i].Name = ReplaceNamesString(file.Name, project_name)
