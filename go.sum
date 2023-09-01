@@ -1,4 +1,8 @@
-github.com/Nigel2392/typeutils v1.0.0 h1:AjG+EqJjmVxMNlcQPGAMGO9oX/ojgVQ/oPxehDS9Lo8=
-github.com/Nigel2392/typeutils v1.0.0/go.mod h1:EImP292xlSaMzezVdG1rL1qppZl9azUBiuBO9m9iBv8=
-github.com/yuin/goldmark v1.5.2 h1:ALmeCk/px5FSm1MAcFBAsVKZjDuMVj8Tm7FFIlMJnqU=
-github.com/yuin/goldmark v1.5.2/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
+github.com/Nigel2392/typeutils v1.1.1 h1:ZL8azlQKOAgHIFeHnvS+RnQ1z/CEG8iEOw1I43RdZMc=
+github.com/Nigel2392/typeutils v1.1.1/go.mod h1:9Y8rV5c8ZfD2N9y+mtF9Kmy3OtDubcuevYeCQCLq/Sw=
+github.com/yuin/goldmark v1.5.6 h1:COmQAWTCcGetChm3Ig7G/t8AFAN00t+o8Mt4cf7JpwA=
+github.com/yuin/goldmark v1.5.6/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
+golang.org/x/sys v0.1.0 h1:kunALQeHf1/185U1i0GOB/fy1IPRDDpuoOOqRReG57U=
+golang.org/x/sys v0.1.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/term v0.1.0 h1:g6Z6vPFA9dYBAF7DWcH6sCcOntplXsDKcliusYijMlw=
+golang.org/x/term v0.1.0/go.mod h1:jbD1KX2456YbFQfuXm/mYQcufACuNUgVhRMnK/tPxf8=

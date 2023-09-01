@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Nigel2392/typeutils"
+	"github.com/Nigel2392/typeutils/terminal"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
@@ -33,7 +33,7 @@ func Craft(color, s any) string {
 }
 
 func RepeatAsk(s string, allowed []string) string {
-	answer := typeutils.Ask(s)
+	answer := terminal.Ask(s)
 	answer = strings.ToLower(answer)
 	for _, a := range allowed {
 		if answer == strings.ToLower(a) {
@@ -125,7 +125,7 @@ func WriteConf(path string, data []byte) error {
 			answer = RepeatAsk("Do you want to change the name of the file? (y/n): ", []string{"y", "n"})
 			if answer == "y" {
 				// Ask for the new name
-				name := typeutils.Ask("Enter the name of the file: ")
+				name := terminal.Ask("Enter the name of the file: ")
 				// Make the name path safe
 				name = URLOmit(AppConfig.GetName(name))
 				// Write the file by recursion

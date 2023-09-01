@@ -14,6 +14,8 @@ type FlagRunner struct {
 	config_name  *string // Configuration name to use (-l to view available)
 	proj_name    *string // Project name to use, or name of new config when using -get
 	encoder      *string // Encoder type for new config when generating, or using
+	host         *string // Host to serve on
+	port         *string // Port to serve on
 	list_configs *bool   // List available configurations
 	view_config  *bool   // View configuration file/directory tree
 	location     *bool   // Print current directory location, and executable location
@@ -51,6 +53,14 @@ func (fr *FlagRunner) Run() {
 		dirnames := ListInternalConfigs()
 		dirnames = append(dirnames, ListConfigs()...)
 		viewer := NewViewer(dirnames, *fr.raw)
+		viewer.host = *fr.host
+		viewer.port = *fr.port
+		if viewer.host == "" {
+			viewer.host = AppConfig.Host
+		}
+		if viewer.port == "" {
+			viewer.port = AppConfig.Port
+		}
 		if err := viewer.serve(*fr.openBrowser); err != nil {
 			panic(err)
 		}

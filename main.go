@@ -74,6 +74,8 @@ func main() {
 	fr.del_conf = flag.Bool("del", false, "Delete a config")
 	fr.raw = flag.Bool("raw", false, "Output raw project from json")
 	fr.serve = flag.Bool("serve", false, "Serve the project files over http to preview (optional -o)")
+	fr.host = flag.String("host", "", "Host to serve on")
+	fr.port = flag.String("port", "", "Port to serve on")
 	fr.openBrowser = flag.Bool("o", false, "Open the browser after serving the project")
 	fr.encoder = flag.String("enc", "", "Encoder to use for the project (json/gob). Can also be set in the config.json")
 

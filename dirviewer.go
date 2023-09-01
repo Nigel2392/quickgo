@@ -11,6 +11,8 @@ import (
 var TemplateFS embed.FS
 
 type Viewer struct {
+	host      string
+	port      string
 	Dirs      []Directory
 	bases     []string
 	templates map[string]*template.Template

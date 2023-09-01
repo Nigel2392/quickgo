@@ -29,7 +29,7 @@ These default configs are only available via the "-d (template name)" argument.
 
 ## Installation:
 ```
-go install github.com/Nigel2392/quickgo
+go install github.com/Nigel2392/quickgo/v2/v2/v2
 ```
 
 ## Available commands:
@@ -56,7 +56,7 @@ go install github.com/Nigel2392/quickgo
     - Replaces the `$$PROJECT_NAME; OMITURL$$` in the template with the name of the project, assuming the name is the last part of the URL passsed into -n
       - This is useful when creating Golang packages
       - Example: 
-        - github.com/Nigel2392/quickgo -> quickgo
+        - github.com/Nigel2392/quickgo/v2 -> quickgo
         - www.github.com -> www_github_com
 - **-use**
   - Path of the JSON file to use for creating templates (usage: quickgo -use (config name))

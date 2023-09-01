@@ -17,19 +17,19 @@ func (v *Viewer) serve(openBrowser bool) error {
 	http.HandleFunc("/favicon.ico", v.iconHandler)
 	http.HandleFunc("/sitemap.xml", v.SitemapHandler)
 	http.HandleFunc("/", v.directoryHandler)
-	fmt.Println(Craft(CMD_BRIGHT_Blue, "Serving on http://"+AppConfig.Host+":"+AppConfig.Port))
+	fmt.Println(Craft(CMD_BRIGHT_Blue, "Serving on http://"+v.host+":"+v.port))
 	// Open browser to localhost:8000
 	if openBrowser {
-		err := OpenBrowser("http://" + AppConfig.Host + ":" + AppConfig.Port)
+		err := OpenBrowser("http://" + v.host + ":" + v.port)
 		if err != nil {
 			fmt.Println(Craft(CMD_BRIGHT_Red, "Error opening browser: "+err.Error()))
 		}
 	}
-	return http.ListenAndServe(AppConfig.Host+":"+AppConfig.Port, nil)
+	return http.ListenAndServe(v.host+":"+v.port, nil)
 }
 
 func (v *Viewer) getStaticHandler() http.Handler {
-	static_fs, _ := fs.Sub(fs.FS(TemplateFS), "templates")
+	static_fs, _ := fs.Sub(fs.FS(TemplateFS), "templates/static")
 	return http.StripPrefix("/static/", http.FileServer(http.FS(static_fs)))
 }
 
