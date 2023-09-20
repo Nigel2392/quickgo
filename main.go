@@ -63,8 +63,16 @@ func init() {
 }
 
 func main() {
-	fr := FlagRunner{}
+	var exclude = arrayFlags(make([]string, 0))
+	var excludeContains = arrayFlags(make([]string, 0))
+	fr := FlagRunner{
+		exclude:         &exclude,
+		excludeContains: &excludeContains,
+	}
 	fr.importpath = flag.String("import", "", "Path of the JSON/GOB file to be imported")
+	flag.Var(fr.exclude, "x", "Exclude files and directories from the project, if the path starts with this string it will be excluded")
+	flag.Var(fr.excludeContains, "xcon", "Exclude files and directories from the project, if the path contains this string it will be excluded")
+	fr.verbose = flag.Bool("verbose", false, "Verbose output")
 	fr.get_config = flag.String("get", "", "Get the JSON config of the project")
 	fr.config_name = flag.String("use", "", "Path of the JSON file to use for creating templates")
 	fr.list_configs = flag.Bool("l", false, "List all the available configs")

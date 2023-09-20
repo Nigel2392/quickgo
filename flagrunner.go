@@ -6,23 +6,38 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 )
 
+type arrayFlags []string
+
+func (i *arrayFlags) String() string {
+	return "my string representation"
+}
+
+func (i *arrayFlags) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
 type FlagRunner struct {
-	importpath   *string // JSON/GOB directory config to import
-	get_config   *string // Generate configuration from directory
-	config_name  *string // Configuration name to use (-l to view available)
-	proj_name    *string // Project name to use, or name of new config when using -get
-	encoder      *string // Encoder type for new config when generating, or using
-	host         *string // Host to serve on
-	port         *string // Port to serve on
-	list_configs *bool   // List available configurations
-	view_config  *bool   // View configuration file/directory tree
-	location     *bool   // Print current directory location, and executable location
-	del_conf     *bool   // Delete configuration, only works when specifying a config with -use
-	raw          *bool   // Don't replace $$PROJECT_NAME$$ with project name, keep as is
-	serve        *bool   // Serve the configuration over http to preview
-	openBrowser  *bool   // Open browser automatically when serving
+	importpath      *string     // JSON/GOB directory config to import
+	get_config      *string     // Generate configuration from directory
+	verbose         *bool       // Verbose output
+	exclude         *arrayFlags // Exclude files from configuration when generating
+	excludeContains *arrayFlags // Exclude files from configuration when generating
+	config_name     *string     // Configuration name to use (-l to view available)
+	proj_name       *string     // Project name to use, or name of new config when using -get
+	encoder         *string     // Encoder type for new config when generating, or using
+	host            *string     // Host to serve on
+	port            *string     // Port to serve on
+	list_configs    *bool       // List available configurations
+	view_config     *bool       // View configuration file/directory tree
+	location        *bool       // Print current directory location, and executable location
+	del_conf        *bool       // Delete configuration, only works when specifying a config with -use
+	raw             *bool       // Don't replace $$PROJECT_NAME$$ with project name, keep as is
+	serve           *bool       // Serve the configuration over http to preview
+	openBrowser     *bool       // Open browser automatically when serving
 }
 
 func (fr *FlagRunner) Run() {
@@ -94,7 +109,15 @@ func (fr *FlagRunner) Run() {
 		}
 
 	} else if *fr.get_config != "" { // Generate configuration
-		dir, err := GetDirFromPath(*fr.get_config)
+		var exclude = setupExclude(*fr.exclude)
+		if *fr.verbose {
+			fmt.Println("Excluding:")
+			for _, ex := range exclude {
+				fmt.Println(Craft(CMD_Red, ex))
+			}
+			time.Sleep(3 * time.Second)
+		}
+		dir, err := GetDirFromPath(*fr.get_config, exclude, *fr.excludeContains, *fr.verbose)
 		if err != nil {
 			panic(err)
 		}

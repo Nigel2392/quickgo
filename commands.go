@@ -89,7 +89,59 @@ func InitProjectConfig(path string) (Directory, error) {
 	return dir, nil
 }
 
-func GetDirFromPath(path string) (Directory, error) {
+func setupExclude(exclude []string) []string {
+	if exclude == nil {
+		return []string{}
+	}
+	for i, ex := range exclude {
+		if strings.HasPrefix(ex, "./") {
+			ex = strings.TrimPrefix(ex, ".")
+		}
+		ex = filepath.ToSlash(ex)
+		ex = strings.TrimPrefix(ex, "/")
+		exclude[i] = ex
+	}
+	return exclude
+}
+
+func anyFunc[T any](s []T, f func(int) bool) bool {
+	if s == nil {
+		return false
+	}
+	for i := range s {
+		if f(i) {
+			return true
+		}
+	}
+	return false
+}
+
+func isExcluded(path string, exclude []string, excludeContains []string) bool {
+	if exclude == nil && excludeContains == nil {
+		return false
+	}
+
+	if anyFunc(excludeContains, func(i int) bool {
+		return strings.Contains(path, excludeContains[i])
+	}) {
+		return true
+	}
+	if exclude != nil {
+		if strings.HasPrefix(path, "./") {
+			path = strings.TrimPrefix(path, ".")
+		}
+		path = filepath.ToSlash(path)
+		path = strings.TrimPrefix(path, "/")
+		if anyFunc(exclude, func(i int) bool {
+			return strings.HasPrefix(path, exclude[i])
+		}) {
+			return true
+		}
+	}
+	return false
+}
+
+func GetDirFromPath(path string, exclude []string, excludeContains []string, verbose bool) (Directory, error) {
 	var dir Directory
 	dir.Name = filepath.Base(path)
 	files, err := os.ReadDir(path)
@@ -97,14 +149,24 @@ func GetDirFromPath(path string) (Directory, error) {
 		return Directory{}, err
 	}
 	for _, f := range files {
+		var fullPath = filepath.Join(path, f.Name())
+		if isExcluded(fullPath, exclude, excludeContains) {
+			if verbose {
+				fmt.Printf("[excluded] %s\n", fullPath)
+			}
+			continue
+		}
+		if verbose {
+			fmt.Printf("[reading] %s\n", fullPath)
+		}
 		if f.IsDir() {
-			child, err := GetDirFromPath(path + "\\" + f.Name())
+			child, err := GetDirFromPath(fullPath, exclude, excludeContains, verbose)
 			if err != nil {
 				return Directory{}, err
 			}
 			dir.Children = append(dir.Children, child)
 		} else {
-			file, err := os.ReadFile(path + "\\" + f.Name())
+			file, err := os.ReadFile(fullPath)
 			if err != nil {
 				return Directory{}, err
 			}
