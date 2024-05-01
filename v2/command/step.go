@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"slices"
+
+	"github.com/Nigel2392/quickgo/v2/logger"
 )
 
 // CommandStep represents a command to run.
@@ -37,7 +39,7 @@ func (s Step) Execute(env map[string]string) error {
 	//cmd.SysProcAttr = &syscall.SysProcAttr{
 	//	HideWindow: true,
 	//}
-	cmd.Stdout = os.Stdout
+	cmd.Stdout = logger.Global()
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }

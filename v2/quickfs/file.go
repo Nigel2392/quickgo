@@ -43,6 +43,10 @@ func NewFSFile(name, path string, root *FSDirectory) (*FSFile, error) {
 	return f, nil
 }
 
+func (f *FSFile) IsDir() bool {
+	return false
+}
+
 func (f *FSFile) GetName() string {
 	return f.Name
 }

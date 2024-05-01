@@ -49,6 +49,10 @@ func NewFSDirectory(name, dirPath string, root *FSDirectory) *FSDirectory {
 	}
 }
 
+func (f *FSDirectory) IsDir() bool {
+	return true
+}
+
 func (d *FSDirectory) Load() error {
 
 	if d.IsExcluded != nil && d.IsExcluded(d) {

@@ -3,7 +3,6 @@ package quickgo
 import (
 	"archive/zip"
 	"bytes"
-	"fmt"
 	"io"
 	"io/fs"
 	"maps"
@@ -14,6 +13,7 @@ import (
 	"text/template"
 
 	"github.com/Nigel2392/quickgo/v2/config"
+	"github.com/Nigel2392/quickgo/v2/logger"
 	"github.com/Nigel2392/quickgo/v2/quickfs"
 	"github.com/pkg/errors"
 )
@@ -60,6 +60,7 @@ func LoadApp() (*App, error) {
 	_, err = os.Stat(projectDir)
 
 	if err != nil && os.IsNotExist(err) {
+		logger.Infof("Creating new config directory %s", projectDir)
 		if err = os.MkdirAll(projectDir, os.ModePerm); err != nil {
 			return nil, err
 		}
@@ -92,7 +93,10 @@ func LoadApp() (*App, error) {
 			Port: "8080",
 		}
 
+		logger.Infof("Writing new config file %s", configPath)
+
 		if err = config.WriteYaml(cfg, configPath); err != nil {
+			logger.Errorf("Failed to write config file %s", configPath)
 			return nil, errors.Wrapf(err, "failed to write config file %s", configPath)
 		}
 	}
@@ -103,16 +107,22 @@ func LoadApp() (*App, error) {
 }
 
 func (a *App) LoadProjectConfig() error {
+
+	logger.Debugf("Loading project config: %s", PROJECT_CONFIG_NAME)
+
 	proj, err := config.LoadYamlFS[config.Project](
 		a.ProjectFS,
 		PROJECT_CONFIG_NAME,
 	)
 	if err != nil && os.IsNotExist(err) {
+		logger.Error("Project config not found")
 		return ErrProjectMissing
 	} else if err != nil {
 		return err
 	}
 	a.ProjectConfig = proj
+
+	logger.Debugf("Loaded project config %s", a.ProjectConfig.Name)
 
 	return nil
 }
@@ -175,13 +185,17 @@ func (a *App) WriteProject(proj *config.Project, directory string) error {
 		return errors.Wrapf(err, "failed to create project directory %s", projectDir)
 	}
 
+	logger.Infof("Copying project files to %s", projectDir)
+
 	_, err = proj.Root.ForEach(func(fl quickfs.FileLike) (cancel bool, err error) {
 		var p = fl.GetPath()
 		if strings.Contains(p, "$$PROJECT_NAME$$") {
 			p = strings.ReplaceAll(p, "$$PROJECT_NAME$$", proj.Name)
 		}
-
 		var path = path.Join(projectDir, p)
+
+		logger.Debugf("Copying %s to %s (isDir=%v)", fl.GetPath(), path, fl.IsDir())
+
 		switch f := fl.(type) {
 		case *quickfs.FSFile:
 			var dir = filepath.Dir(path)
@@ -205,14 +219,25 @@ func (a *App) WriteProject(proj *config.Project, directory string) error {
 			}
 		}
 
+		logger.Debugf("Copied %s to %s", fl.GetPath(), path)
+
 		return false, nil
 	})
 
 	if err != nil {
+		logger.Errorf("Failed to copy project files to %s", projectDir)
 		return err
 	}
 
-	return a.ProjectConfig.AfterCopy.Execute(context)
+	err = a.ProjectConfig.AfterCopy.Execute(context)
+	if err != nil {
+		return errors.Wrap(err, "failed to execute after copy steps")
+	}
+
+	logger.Infof("Finished copying project files to %s", projectDir)
+
+	return nil
+
 }
 
 func (a *App) WriteProjectConfig(proj *config.Project) error {
@@ -226,6 +251,8 @@ func (a *App) WriteProjectConfig(proj *config.Project) error {
 	if err = os.MkdirAll(dirPath, os.ModePerm); err != nil {
 		return err
 	}
+
+	logger.Infof("Writing project config to %s", path)
 
 	err = config.WriteYaml(proj, path)
 	if err != nil {
@@ -242,8 +269,12 @@ func (a *App) WriteProjectConfig(proj *config.Project) error {
 	var zf = zip.NewWriter(file)
 	defer zf.Close()
 
+	logger.Infof("Writing project files to %s", zipPath)
+
 	_, err = a.ProjectConfig.Root.ForEach(func(fl quickfs.FileLike) (cancel bool, err error) {
 		var p = fl.GetPath()
+
+		logger.Debugf("Writing %s to %s (isDir=%v)", fl.GetPath(), p, fl.IsDir())
 
 		switch f := fl.(type) {
 		case *quickfs.FSFile:
@@ -251,12 +282,9 @@ func (a *App) WriteProjectConfig(proj *config.Project) error {
 			if err != nil {
 				return true, err
 			}
-			var written int64
-			if written, err = io.Copy(w, f); err != nil {
+			if _, err = io.Copy(w, f); err != nil {
 				return true, err
 			}
-
-			fmt.Printf("Wrote %d bytes to %s\n", written, p)
 
 		case *quickfs.FSDirectory:
 			if !strings.HasSuffix(p, "/") {
@@ -266,13 +294,19 @@ func (a *App) WriteProjectConfig(proj *config.Project) error {
 			if _, err = zf.Create(p); err != nil {
 				return true, err
 			}
-
-			fmt.Printf("Created directory %s\n", p)
 		}
+
+		logger.Debugf("Wrote %s to %s", fl.GetPath(), p)
+
 		return false, nil
 	})
 
-	fmt.Printf("Wrote project zip file to %s\n", zipPath)
+	if err != nil {
+		logger.Errorf("Failed to write project to %s: %s", zipPath, err)
+		return err
+	}
+
+	logger.Infof("Finished writing project to %s", zipPath)
 
 	return err
 }

@@ -29,6 +29,6 @@ afterCopy:
 exclude:
     - '*node_modules*'
     - '*dist*'
-    - .git
-    - .quickgo
-    - .github
+    - '.git/*'
+    - '.quickgo/*'
+    - '.github/*'

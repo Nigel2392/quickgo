@@ -1,0 +1,34 @@
+name: my-project
+context:
+    Name: My Project
+    Test: "my-project"
+    Test2: '${{ .Name }} ${{ index .Context "Test" }} ${{ index .Context "Test2" }}'
+
+beforeCopy:
+    steps:
+        - name: Echo Project Name Before
+          command: echo
+          args:
+            - $projectName
+        - name: Echo Project Path Before
+          command: echo
+          args:
+            - $projectPath
+
+afterCopy:
+    steps:
+        - name: Echo Project Name After
+          command: echo
+          args:
+            - $projectName
+        - name: Echo Project Path After
+          command: echo
+          args:
+            - $projectPath
+
+exclude:
+    - '*node_modules*'
+    - '*dist*'
+    - '.git/*'
+    - '.quickgo/*'
+    - '.github/*'

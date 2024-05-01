@@ -15,6 +15,9 @@ type (
 
 		// Path returns the path of the file.
 		GetPath() string
+
+		// IsDir returns true if the file is a directory.
+		IsDir() bool
 	}
 
 	Directory interface {

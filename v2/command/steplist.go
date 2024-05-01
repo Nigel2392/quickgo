@@ -1,6 +1,6 @@
 package command
 
-import "fmt"
+import "github.com/Nigel2392/quickgo/v2/logger"
 
 type StepList struct {
 	Steps []Step `yaml:"steps"`
@@ -11,7 +11,7 @@ func (l *StepList) Execute(env map[string]string) error {
 		return nil
 	}
 	for i, step := range l.Steps {
-		fmt.Printf("%d: %s\n", i, step.Name)
+		logger.Infof("%d: %s\n", i, step.Name)
 		if err := step.Execute(env); err != nil {
 			return &Error{
 				Message:  "failed to execute step",

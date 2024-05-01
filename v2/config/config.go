@@ -2,10 +2,10 @@ package config
 
 import (
 	"encoding/gob"
-	"fmt"
 	"path/filepath"
 
 	"github.com/Nigel2392/quickgo/v2/command"
+	"github.com/Nigel2392/quickgo/v2/logger"
 	"github.com/Nigel2392/quickgo/v2/quickfs"
 )
 
@@ -105,9 +105,9 @@ func (p *Project) Load(projectDirectory string) error {
 func (p *Project) IsExcluded(fl quickfs.FileLike) bool {
 	for _, pattern := range p.Exclude {
 		if m, err := filepath.Match(pattern, fl.GetPath()); err != nil {
-			fmt.Println(err)
 			return false
 		} else if m {
+			logger.Debugf("Excluding %s (%s)", fl.GetPath(), pattern)
 			return true
 		}
 	}

@@ -3,11 +3,20 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/Nigel2392/quickgo/v2"
+	"github.com/Nigel2392/quickgo/v2/logger"
 )
 
 func main() {
+
+	logger.Setup(&logger.Logger{
+		Level:  logger.DebugLevel,
+		Output: os.Stdout,
+		Prefix: "quickgo",
+	})
+
 	var qg, err = quickgo.LoadApp()
 	if err != nil {
 		panic(err)
