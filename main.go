@@ -13,7 +13,7 @@ func main() {
 		panic(err)
 	}
 
-	err = qg.LoadProjectConfig("test")
+	err = qg.LoadProjectConfig(".")
 	if errors.Is(err, quickgo.ErrProjectMissing) {
 		err = qg.WriteExampleProjectConfig()
 		if err != nil {

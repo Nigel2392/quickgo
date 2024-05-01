@@ -1,17 +1,12 @@
-name: my-test-project
+name: my-project
 context:
-    Name: My Test Project
+    Name: My Project
 beforeCopy:
     steps:
-        # - name: install-deps
-        #   command: npm
-        #   args:
-        #     - install
-        # - name: build
-        #   command: npm
-        #   args:
-        #     - run
-        #     - build
+        - name: install-deps
+          command: echo
+          args:
+            - ${projectName}/package.json
 afterCopy:
     steps:
         # - name: build

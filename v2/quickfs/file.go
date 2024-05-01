@@ -14,27 +14,32 @@ type FSFile struct {
 
 	// If the file is all valid utf-8 text.
 	IsText bool
-
-	f *os.File
 }
 
 // NewFSFile creates a new FSFile.
 func NewFile(name, path string) (File, error) {
-	return NewFSFile(name, path)
+	return NewFSFile(name, path, nil)
 }
 
-func NewFSFile(name, path string) (*FSFile, error) {
+func NewFSFile(name, path string, root *FSDirectory) (*FSFile, error) {
 	var f *FSFile = &FSFile{
 		Name: name,
 		Path: path,
 	}
 
-	var file, err = os.Open(path)
+	if root != nil && root.IsExcluded != nil && root.IsExcluded(f) {
+		return nil, ErrFileLikeExcluded
+	}
+
+	var data, err = os.ReadFile(
+		path,
+	)
+
 	if err != nil {
 		return nil, err
 	}
 
-	f.f = file
+	f.Content = data
 
 	return f, nil
 }

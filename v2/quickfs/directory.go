@@ -28,56 +28,58 @@ type FSDirectory struct {
 
 	// IsExcluded returns true if the directory is excluded.
 	// It should only be set on the root directory.
-	IsExcluded func(*FSDirectory) bool
+	IsExcluded func(FileLike) bool
 }
 
 // NewFSDirectory creates a new FSDirectory.
-func NewDirectory(name, path string) (Directory, error) {
+func NewDirectory(name, path string) Directory {
 	return NewFSDirectory(name, path, nil)
 }
 
-func NewFSDirectory(name, filepath string, root *FSDirectory) (*FSDirectory, error) {
-	var d *FSDirectory = &FSDirectory{
+func NewFSDirectory(name, dirPath string, root *FSDirectory) *FSDirectory {
+	return &FSDirectory{
 		Name:        name,
-		Path:        filepath,
+		Path:        dirPath,
 		Files:       make(map[string]File),
 		Directories: make(map[string]*FSDirectory),
 		root:        root,
 	}
+}
 
+func (d *FSDirectory) Load() error {
+
+	var dirs, err = os.ReadDir(d.Path)
+	if err != nil {
+		return err
+	}
+
+	var root = d.root
 	if root == nil {
 		root = d
-	}
-
-	if root.IsExcluded != nil && root.IsExcluded(d) {
-		return nil, ErrFileLikeExcluded
-	}
-
-	var dirs, err = os.ReadDir(filepath)
-	if err != nil {
-		return nil, err
 	}
 
 	for _, dir := range dirs {
 		var (
 			n   = dir.Name()
+			p   = path.Join(d.Path, n)
 			f   *FSFile
 			sub *FSDirectory
 		)
+
 		if dir.IsDir() {
-			sub, err = NewFSDirectory(
-				n, path.Join(filepath, n),
-				root,
+			sub = NewFSDirectory(
+				n, p, root,
 			)
+			err = sub.Load()
 		} else {
 			f, err = NewFSFile(
-				n, path.Join(filepath, n),
+				n, p, root,
 			)
 		}
 		if err != nil && errors.Is(err, ErrFileLikeExcluded) {
 			continue
 		} else if err != nil {
-			return nil, err
+			return err
 		}
 
 		if sub != nil {
@@ -87,7 +89,7 @@ func NewFSDirectory(name, filepath string, root *FSDirectory) (*FSDirectory, err
 		}
 	}
 
-	return d, nil
+	return nil
 }
 
 func (d *FSDirectory) GetName() string {

@@ -4,9 +4,11 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"github.com/Nigel2392/quickgo/v2/config"
 	"github.com/Nigel2392/quickgo/v2/quickfs"
@@ -108,17 +110,15 @@ func (a *App) LoadProjectConfig(projectDirectory string) error {
 	}
 	a.ProjectConfig = proj
 
-	d, err := quickfs.NewDirectory(
+	a.ProjectConfig.Root = quickfs.NewFSDirectory(
 		"$$PROJECT_NAME$$",
 		projectDirectory,
+		nil,
 	)
-	if err != nil {
-		return err
-	}
 
-	a.ProjectConfig.Root = d
+	a.ProjectConfig.Root.IsExcluded = a.ProjectConfig.IsExcluded
 
-	return nil
+	return a.ProjectConfig.Root.Load()
 }
 
 func (a *App) WriteExampleProjectConfig() error {
@@ -190,12 +190,18 @@ func (a *App) WriteProject(proj *config.Project, directory string) error {
 		cwd = directory
 	}
 
-	err = a.ProjectConfig.BeforeCopy.Execute()
-	if err != nil {
+	var (
+		context    = maps.Clone(proj.Context)
+		projectDir = filepath.Join(cwd, proj.Name)
+	)
+
+	context["projectName"] = proj.Name
+	context["projectDir"] = projectDir
+
+	if err = a.ProjectConfig.BeforeCopy.Execute(context); err != nil {
 		return err
 	}
 
-	var projectDir = filepath.Join(cwd, proj.Name)
 	if err = os.MkdirAll(projectDir, os.ModePerm); err != nil {
 		return err
 	}
@@ -209,9 +215,16 @@ func (a *App) WriteProject(proj *config.Project, directory string) error {
 		var path = filepath.Join(projectDir, p)
 		switch f := fl.(type) {
 		case *quickfs.FSFile:
-			if err = os.WriteFile(path, f.Content, os.ModePerm); err != nil {
+			osFile, err := os.Create(path)
+			if err != nil {
 				return true, err
 			}
+			defer osFile.Close()
+
+			if err = a.CopyFileContent(osFile, f); err != nil {
+				return true, err
+			}
+
 		case *quickfs.FSDirectory:
 			if err = os.MkdirAll(path, os.ModePerm); err != nil {
 				return true, err
@@ -225,7 +238,22 @@ func (a *App) WriteProject(proj *config.Project, directory string) error {
 		return err
 	}
 
-	return a.ProjectConfig.AfterCopy.Execute()
+	return a.ProjectConfig.AfterCopy.Execute(context)
+}
+
+func (a *App) CopyFileContent(file *os.File, f *quickfs.FSFile) error {
+	if !f.IsText {
+		_, err := file.Write(f.Content)
+		return err
+	}
+
+	var tpl = template.New("file")
+
+	if _, err := tpl.Parse(string(f.Content)); err != nil {
+		return err
+	}
+
+	return tpl.Execute(file, a.ProjectConfig)
 }
 
 func (a *App) WriteFile(data []byte, path string) error {
