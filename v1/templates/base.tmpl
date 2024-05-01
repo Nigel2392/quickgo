@@ -1,0 +1,111 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>QuickGo Template Manager</title>
+        <link rel="stylesheet" href="/static/template.css" type="text/css">
+        {{block "extra_css" .}}
+
+        {{end}}
+    </head>
+    <body>
+        {{if not .Raw}}
+            <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+                <a class="navbar-brand" href="/">
+                    <div class="stack noselect" style="--stacks: 3;">
+                        <span class="stackspan" style="--index: 0;">
+                            <span class="quickgo-quick">Quick</span>
+                            <span class="quickgo-go">
+                                <span class="quickgo-span quickgo-span-1"></span>
+                                <span class="quickgo-span quickgo-span-2"></span>
+                                <span class="quickgo-span quickgo-span-3"></span>
+                                go
+                            </span>
+
+                        </span>
+                        <span class="stackspan" style="--index: 1;">
+                            <span class="quickgo-quick">Quick</span>
+                            <span class="quickgo-go">
+                                <span class="quickgo-span quickgo-span-1"></span>
+                                <span class="quickgo-span quickgo-span-2"></span>
+                                <span class="quickgo-span quickgo-span-3"></span>
+                                go
+                            </span>
+
+                        </span>
+                        <span class="stackspan" style="--index: 2;">
+                            <span class="quickgo-quick">Quick</span>
+                            <span class="quickgo-go">
+                                <span class="quickgo-span quickgo-span-1"></span>
+                                <span class="quickgo-span quickgo-span-2"></span>
+                                <span class="quickgo-span quickgo-span-3"></span>
+                                go
+                            </span>
+                        </span>
+                    </div>
+                </a>
+                <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+                    <div class="navbar-nav">
+                        <a class="nav-item nav-link" href="/">Root</a>
+                        <a class="nav-item nav-link" href="/readme.md">Readme</a>
+                        <span class="nav-item nav-link">
+                            <div class="page__toggle">
+                                <label class="toggle">
+                                    <input class="toggle__input" name="preview_checkbox" {{if .ShowPreview}}checked{{end}} id="preview_checkbox" placeholder="Preview?" type="checkbox">
+                                    <span class="toggle__label">
+                                        <span class="toggle__text">Preview?</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </span>
+                    </div>
+                </div>
+                <div class="navbar-nav ml-auto" style="margin-right:25px;">
+                    <a class="nav-item nav-link" href="https://github.com/Nigel2392/">Github!</a>
+                </div>
+
+            </nav>
+        {{end}}
+
+        <div class="row">
+            <div class="col-2">
+            </div>
+            <div class="col-8">
+                {{block "content" .}}
+                {{end}}
+            </div>
+            <div class="col-2">
+            </div>
+        </div>
+
+        {{block "extra_js" .}}
+        
+        {{end}}
+        {{if not .Raw}}
+            <script>
+                const dir_links = document.querySelectorAll(".quickgo-dir-link");
+                dir_links.forEach((dir_link) => {
+                    // Listen to hover
+                    dir_link.addEventListener("mouseover", (e) => {
+                        let ifr = dir_link.querySelector(".description")
+                        ifr.style.display = "block";
+                    });
+                    dir_link.addEventListener("mouseout", (e) => {
+                        let ifr = dir_link.querySelector(".description")
+                        ifr.style.display = "none";
+                    });
+                });
+                const preview_checkbox = document.getElementById("preview_checkbox");
+                preview_checkbox.addEventListener("change", (e) => {
+                    if (preview_checkbox.checked) {
+                        window.location.href = window.location.href + "?preview=true";
+                    } else {
+                        window.location.href = window.location.href.split("?")[0];
+                    }
+                });
+            </script>
+        {{end}}
+    </body>
+</html>
+{{end}}
