@@ -1,16 +1,34 @@
 name: my-project
 context:
     Name: My Project
+    Test: "${{ .Name }}"
+    Test2: '${{ index .Context "Test" }} ${{ index .Context "Test2" }}'
+
 beforeCopy:
     steps:
-        - name: install-deps
+        - name: Echo Project Name Before
           command: echo
           args:
-            - ${projectName}/package.json
+            - $projectName
+        - name: Echo Project Path Before
+          command: echo
+          args:
+            - $projectPath
+
 afterCopy:
     steps:
-        # - name: build
-        #   command: npm
-        #   args:
-        #     - run
-        #     - build
+        - name: Echo Project Name After
+          command: echo
+          args:
+            - $projectName
+        - name: Echo Project Path After
+          command: echo
+          args:
+            - $projectPath
+
+exclude:
+    - '*node_modules*'
+    - '*dist*'
+    - .git
+    - .quickgo
+    - .github

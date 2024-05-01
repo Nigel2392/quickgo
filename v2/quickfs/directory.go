@@ -2,8 +2,11 @@ package quickfs
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"os"
 	"path"
+	"path/filepath"
 )
 
 var (
@@ -47,6 +50,11 @@ func NewFSDirectory(name, dirPath string, root *FSDirectory) *FSDirectory {
 }
 
 func (d *FSDirectory) Load() error {
+
+	if d.IsExcluded != nil && d.IsExcluded(d) {
+		fmt.Println("excluded", d.Path)
+		return ErrFileLikeExcluded
+	}
 
 	var dirs, err = os.ReadDir(d.Path)
 	if err != nil {
@@ -119,6 +127,37 @@ func (d *FSDirectory) Find(path []string) (FileLike, error) {
 	}
 
 	return nil, os.ErrNotExist
+}
+
+func (d *FSDirectory) AddDirectory(dirPath string) {
+	var parts = filepath.SplitList(dirPath)
+	var dir = d
+	for _, part := range parts {
+		if _, ok := dir.Directories[part]; !ok {
+			dir.Directories[part] = NewFSDirectory(
+				part, filepath.Join(dir.Path, part), d.root,
+			)
+		}
+	}
+}
+
+func (d *FSDirectory) AddFile(filePath string, reader io.ReadCloser) {
+	var parts = filepath.SplitList(filePath)
+	var dir = d
+	for _, part := range parts[:len(parts)-1] {
+		if _, ok := dir.Directories[part]; !ok {
+			dir.Directories[part] = NewFSDirectory(
+				part, filepath.Join(dir.Path, part), d.root,
+			)
+		}
+		dir = dir.Directories[part]
+	}
+
+	dir.Files[parts[len(parts)-1]] = &FSFile{
+		Name:   parts[len(parts)-1],
+		Path:   filePath,
+		Reader: reader,
+	}
 }
 
 func (d *FSDirectory) ForEach(fn func(FileLike) (cancel bool, err error)) (cancel bool, err error) {

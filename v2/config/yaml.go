@@ -25,6 +25,22 @@ func LoadYamlFS[T any](fileSys fs.FS, path string) (*T, error) {
 	return data, nil
 }
 
+func LoadYaml[T any](path string) (*T, error) {
+	var (
+		data   = new(T)
+		f, err = os.ReadFile(path)
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = yaml.Unmarshal(f, data); err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
 func WriteYaml(data interface{}, path string) error {
 	var (
 		f, err = yaml.Marshal(data)

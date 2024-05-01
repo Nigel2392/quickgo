@@ -13,7 +13,13 @@ func main() {
 		panic(err)
 	}
 
-	err = qg.LoadProjectConfig(".")
+	err = qg.LoadProjectConfig()
+	if err != nil {
+		panic(err)
+	}
+
+	err = qg.ProjectConfig.Load(".")
+
 	if errors.Is(err, quickgo.ErrProjectMissing) {
 		err = qg.WriteExampleProjectConfig()
 		if err != nil {
@@ -33,8 +39,16 @@ func main() {
 
 	fmt.Println("Project config written.")
 
-	err = qg.WriteProject(qg.ProjectConfig, "test")
+	proj, close, err := qg.ReadProjectConfig(qg.ProjectConfig.Name)
+	if err != nil {
+		panic(fmt.Errorf("failed to read project config: %w", err))
+	}
+
+	defer close()
+
+	err = qg.WriteProject(proj, "test")
 	if err != nil {
 		panic(fmt.Errorf("failed to write project: %w", err))
 	}
+
 }

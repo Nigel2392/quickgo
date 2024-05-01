@@ -1,6 +1,9 @@
 package quickfs
 
-import "os"
+import (
+	"io"
+	"os"
+)
 
 type FSFile struct {
 	// Name of the file.
@@ -9,11 +12,10 @@ type FSFile struct {
 	// Path of the file.
 	Path string
 
-	// Content of the file.
-	Content []byte
-
 	// If the file is all valid utf-8 text.
 	IsText bool
+
+	Reader io.ReadCloser
 }
 
 // NewFSFile creates a new FSFile.
@@ -31,15 +33,12 @@ func NewFSFile(name, path string, root *FSDirectory) (*FSFile, error) {
 		return nil, ErrFileLikeExcluded
 	}
 
-	var data, err = os.ReadFile(
-		path,
-	)
-
+	var osF, err = os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 
-	f.Content = data
+	f.Reader = osF
 
 	return f, nil
 }
@@ -53,9 +52,12 @@ func (f *FSFile) GetPath() string {
 }
 
 func (f *FSFile) Read(p []byte) (n int, err error) {
-	return copy(p, f.Content), nil
+	return f.Reader.Read(p)
 }
 
-func (f *FSFile) Size() int64 {
-	return int64(len(f.Content))
+func (f *FSFile) Close() error {
+	if f.Reader != nil {
+		return f.Reader.Close()
+	}
+	return nil
 }

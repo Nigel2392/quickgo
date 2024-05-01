@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/gob"
+	"fmt"
 	"path/filepath"
 
 	"github.com/Nigel2392/quickgo/v2/command"
@@ -60,32 +61,51 @@ func ExampleProjectConfig() *Project {
 		BeforeCopy: &command.StepList{
 			Steps: []command.Step{
 				{
-					Name:    "install-deps",
-					Command: "npm",
-					Args:    []string{"install"},
+					Name:    "Echo Project Name Before",
+					Command: "echo",
+					Args:    []string{"$projectName"},
 				},
 				{
-					Name:    "build",
-					Command: "npm",
-					Args:    []string{"run", "build"},
+					Name:    "Echo Project Path Before",
+					Command: "echo",
+					Args:    []string{"$projectPath"},
 				},
 			},
 		},
 		AfterCopy: &command.StepList{
 			Steps: []command.Step{
 				{
-					Name:    "build",
-					Command: "npm",
-					Args:    []string{"run", "build"},
+					Name:    "Echo Project Name After",
+					Command: "echo",
+					Args:    []string{"$projectName"},
+				},
+				{
+					Name:    "Echo Project Path After",
+					Command: "echo",
+					Args:    []string{"$projectPath"},
 				},
 			},
 		},
 	}
 }
 
+// Load loads the project configuration.
+func (p *Project) Load(projectDirectory string) error {
+	p.Root = quickfs.NewFSDirectory(
+		"$$PROJECT_NAME$$",
+		projectDirectory,
+		nil,
+	)
+
+	p.Root.IsExcluded = p.IsExcluded
+
+	return p.Root.Load()
+}
+
 func (p *Project) IsExcluded(fl quickfs.FileLike) bool {
 	for _, pattern := range p.Exclude {
 		if m, err := filepath.Match(pattern, fl.GetPath()); err != nil {
+			fmt.Println(err)
 			return false
 		} else if m {
 			return true

@@ -1,11 +1,14 @@
 package quickgo
 
 import (
-	"encoding/gob"
+	"archive/zip"
+	"bytes"
 	"fmt"
+	"io"
 	"io/fs"
 	"maps"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -19,6 +22,7 @@ const (
 	QUICKGO_DIR         = ".quickgo"     // The directory for QuickGo files, resides in the executable directory.
 	QUICKGO_CONFIG_NAME = "quickgo.yaml" // Config file for QuickGo, resides in the executable directory.
 	PROJECT_CONFIG_NAME = "quickgo.yaml" // Config file for the project, resides in the project (working) directory.
+	PROJECT_ZIP_NAME    = "project.zip"  // The name of the project zip file.
 
 	// Error messages.
 	ErrProjectMissing = ErrorStr("project config not found")
@@ -98,7 +102,7 @@ func LoadApp() (*App, error) {
 	return app, nil
 }
 
-func (a *App) LoadProjectConfig(projectDirectory string) error {
+func (a *App) LoadProjectConfig() error {
 	proj, err := config.LoadYamlFS[config.Project](
 		a.ProjectFS,
 		PROJECT_CONFIG_NAME,
@@ -110,15 +114,7 @@ func (a *App) LoadProjectConfig(projectDirectory string) error {
 	}
 	a.ProjectConfig = proj
 
-	a.ProjectConfig.Root = quickfs.NewFSDirectory(
-		"$$PROJECT_NAME$$",
-		projectDirectory,
-		nil,
-	)
-
-	a.ProjectConfig.Root.IsExcluded = a.ProjectConfig.IsExcluded
-
-	return a.ProjectConfig.Root.Load()
+	return nil
 }
 
 func (a *App) WriteExampleProjectConfig() error {
@@ -126,52 +122,23 @@ func (a *App) WriteExampleProjectConfig() error {
 	return config.WriteYaml(example, PROJECT_CONFIG_NAME)
 }
 
-func getProjectFilePath(name string) string {
-	return filepath.Join(
-		executableDir,
-		QUICKGO_DIR,
-		"projects",
-		fmt.Sprintf(
-			"%s.quickgo",
-			strings.ToLower(name),
-		),
-	)
-}
-
-func (a *App) WriteProjectConfig(proj *config.Project) error {
-	var (
-		err  error
-		file *os.File
-		path = getProjectFilePath(proj.Name)
-	)
-
-	if file, err = os.Create(path); err != nil {
-		return err
-	}
-	defer file.Close()
-
-	return gob.NewEncoder(file).Encode(a.ProjectConfig)
-}
-
-func (a *App) ReadProjectConfig(name string) (*config.Project, error) {
-	var (
-		err  error
-		file *os.File
-		path = getProjectFilePath(name)
-		proj = new(config.Project)
-	)
-
-	if file, err = os.Open(path); err != nil {
-		return nil, err
+func getProjectFilePath(name string, absolute bool) string {
+	var p string
+	if absolute {
+		p = path.Join(
+			executableDir,
+			QUICKGO_DIR,
+			"projects",
+			name,
+		)
+	} else {
+		p = path.Join(
+			"projects",
+			name,
+		)
 	}
 
-	defer file.Close()
-
-	if err = gob.NewDecoder(file).Decode(proj); err != nil {
-		return nil, err
-	}
-
-	return proj, nil
+	return strings.ReplaceAll(p, "\\", "/")
 }
 
 func (a *App) WriteProject(proj *config.Project, directory string) error {
@@ -195,15 +162,17 @@ func (a *App) WriteProject(proj *config.Project, directory string) error {
 		projectDir = filepath.Join(cwd, proj.Name)
 	)
 
+	projectDir = strings.ReplaceAll(projectDir, "\\", "/")
+
 	context["projectName"] = proj.Name
-	context["projectDir"] = projectDir
+	context["projectPath"] = projectDir
 
 	if err = a.ProjectConfig.BeforeCopy.Execute(context); err != nil {
-		return err
+		return errors.Wrap(err, "failed to execute before copy steps")
 	}
 
 	if err = os.MkdirAll(projectDir, os.ModePerm); err != nil {
-		return err
+		return errors.Wrapf(err, "failed to create project directory %s", projectDir)
 	}
 
 	_, err = proj.Root.ForEach(func(fl quickfs.FileLike) (cancel bool, err error) {
@@ -212,22 +181,27 @@ func (a *App) WriteProject(proj *config.Project, directory string) error {
 			p = strings.ReplaceAll(p, "$$PROJECT_NAME$$", proj.Name)
 		}
 
-		var path = filepath.Join(projectDir, p)
+		var path = path.Join(projectDir, p)
 		switch f := fl.(type) {
 		case *quickfs.FSFile:
+			var dir = filepath.Dir(path)
+			if err = os.MkdirAll(dir, os.ModePerm); err != nil {
+				return true, errors.Wrapf(err, "failed to create directory %s", dir)
+			}
+
 			osFile, err := os.Create(path)
 			if err != nil {
-				return true, err
+				return true, errors.Wrapf(err, "failed to create file %s", path)
 			}
 			defer osFile.Close()
 
 			if err = a.CopyFileContent(osFile, f); err != nil {
-				return true, err
+				return true, errors.Wrapf(err, "failed to copy file content to %s", path)
 			}
 
 		case *quickfs.FSDirectory:
 			if err = os.MkdirAll(path, os.ModePerm); err != nil {
-				return true, err
+				return true, errors.Wrapf(err, "failed to create directory %s", path)
 			}
 		}
 
@@ -241,15 +215,158 @@ func (a *App) WriteProject(proj *config.Project, directory string) error {
 	return a.ProjectConfig.AfterCopy.Execute(context)
 }
 
+func (a *App) WriteProjectConfig(proj *config.Project) error {
+	var (
+		err     error
+		file    *os.File
+		dirPath = getProjectFilePath(proj.Name, true)
+	)
+
+	var path = filepath.Join(dirPath, PROJECT_CONFIG_NAME)
+	if err = os.MkdirAll(dirPath, os.ModePerm); err != nil {
+		return err
+	}
+
+	err = config.WriteYaml(proj, path)
+	if err != nil {
+		return err
+	}
+
+	var zipPath = filepath.Join(dirPath, PROJECT_ZIP_NAME)
+
+	if file, err = os.Create(zipPath); err != nil {
+		return err
+	}
+	defer file.Close()
+
+	var zf = zip.NewWriter(file)
+	defer zf.Close()
+
+	_, err = a.ProjectConfig.Root.ForEach(func(fl quickfs.FileLike) (cancel bool, err error) {
+		var p = fl.GetPath()
+
+		switch f := fl.(type) {
+		case *quickfs.FSFile:
+			var w, err = zf.Create(p)
+			if err != nil {
+				return true, err
+			}
+			var written int64
+			if written, err = io.Copy(w, f); err != nil {
+				return true, err
+			}
+
+			fmt.Printf("Wrote %d bytes to %s\n", written, p)
+
+		case *quickfs.FSDirectory:
+			if !strings.HasSuffix(p, "/") {
+				p += "/"
+			}
+
+			if _, err = zf.Create(p); err != nil {
+				return true, err
+			}
+
+			fmt.Printf("Created directory %s\n", p)
+		}
+		return false, nil
+	})
+
+	fmt.Printf("Wrote project zip file to %s\n", zipPath)
+
+	return err
+}
+
+func (a *App) ReadProjectConfig(name string) (proj *config.Project, closeFiles func(), err error) {
+	var (
+		file       *os.File
+		dirPath    = getProjectFilePath(name, false)
+		absDirPath = getProjectFilePath(name, true)
+	)
+	proj, err = config.LoadYaml[config.Project](
+		path.Join(absDirPath, PROJECT_CONFIG_NAME),
+	)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to load YAML for project config %s", name)
+	}
+
+	proj.Root = quickfs.NewFSDirectory(
+		proj.Name,
+		dirPath,
+		nil,
+	)
+	proj.Root.IsExcluded = proj.IsExcluded
+
+	file, err = os.Open(
+		path.Join(absDirPath, PROJECT_ZIP_NAME),
+	)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to open zip file for project %s", name)
+	}
+
+	stat, err := file.Stat()
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to get file info for %s", file.Name())
+	}
+
+	zf, err := zip.NewReader(file, stat.Size())
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to read zip file %s", file.Name())
+	}
+
+	var zipFiles = make([]io.ReadCloser, 0, len(zf.File))
+	closeFiles = func() {
+		for _, f := range zipFiles {
+			f.Close()
+		}
+	}
+
+	for _, f := range zf.File {
+		var (
+			fInfo = f.FileInfo()
+		)
+
+		if fInfo.IsDir() {
+			proj.Root.AddDirectory(f.Name)
+
+		} else {
+
+			zipF, err := f.Open()
+			if err != nil {
+				return nil, closeFiles, err
+			}
+
+			zipFiles = append(zipFiles, zipF)
+
+			proj.Root.AddFile(f.Name, zipF)
+		}
+	}
+
+	return proj, closeFiles, nil
+}
+
 func (a *App) CopyFileContent(file *os.File, f *quickfs.FSFile) error {
+	var b = new(bytes.Buffer)
+	if _, err := io.Copy(b, f); err != nil {
+		return err
+	}
+
+	f.IsText = quickfs.IsText(b.Bytes())
+
 	if !f.IsText {
-		_, err := file.Write(f.Content)
+		_, err := io.Copy(file, b)
 		return err
 	}
 
 	var tpl = template.New("file")
+	tpl.Delims("${{", "}}")
 
-	if _, err := tpl.Parse(string(f.Content)); err != nil {
+	content, err := io.ReadAll(b)
+	if err != nil {
+		return err
+	}
+
+	if _, err = tpl.Parse(string(content)); err != nil {
 		return err
 	}
 
