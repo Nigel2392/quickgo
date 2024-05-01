@@ -1,4 +1,7 @@
-![quickgo_lg](https://github.com/Nigel2392/quickgo/blob/main/.github/assets/quickgo.png?raw=true)
+
+<center>
+    <img src="https://github.com/Nigel2392/quickgo/blob/main/.github/assets/quickgo.png?raw=true" alt="QuickGo Logo"/>
+</center>
 
 # Why QuickGo?
 
