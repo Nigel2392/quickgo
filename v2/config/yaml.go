@@ -15,7 +15,7 @@ func LoadYamlFS[T any](fileSys fs.FS, path string) (*T, error) {
 		f, err = fs.ReadFile(fileSys, path)
 	)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	if err = yaml.Unmarshal(f, data); err != nil {

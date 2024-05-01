@@ -1,5 +1,7 @@
 github.com/Nigel2392/typeutils v1.1.1 h1:ZL8azlQKOAgHIFeHnvS+RnQ1z/CEG8iEOw1I43RdZMc=
 github.com/Nigel2392/typeutils v1.1.1/go.mod h1:9Y8rV5c8ZfD2N9y+mtF9Kmy3OtDubcuevYeCQCLq/Sw=
+github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
+github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/yuin/goldmark v1.5.6 h1:COmQAWTCcGetChm3Ig7G/t8AFAN00t+o8Mt4cf7JpwA=
 github.com/yuin/goldmark v1.5.6/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 golang.org/x/sys v0.12.0 h1:CM0HF96J0hcLAwsHPJZjfdNzs0gftsLfgKt57wWHJ0o=

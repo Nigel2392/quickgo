@@ -10,8 +10,8 @@ type Error struct {
 	Err error
 
 	// The step or steplist that caused the error.
-	Step     Step
-	Steplist List
+	Step     *Step
+	Steplist *StepList
 }
 
 // Error returns the error message.

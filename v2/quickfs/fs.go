@@ -1,14 +1,17 @@
 package quickfs
 
-import "io"
+import (
+	"encoding/gob"
+	"io"
+)
 
 type (
 	FileLike interface {
 		// Name returns the name of the file.
-		Name() string
+		GetName() string
 
 		// Path returns the path of the file.
-		Path() string
+		GetPath() string
 	}
 
 	Directory interface {
@@ -26,3 +29,8 @@ type (
 		io.Reader
 	}
 )
+
+func init() {
+	gob.Register(&FSDirectory{})
+	gob.Register(&FSFile{})
+}

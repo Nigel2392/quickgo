@@ -1,13 +1,14 @@
 package command
 
-type StepList []Step
-
-func (l StepList) Steps() []Step {
-	return l
+type StepList struct {
+	Steps []*Step `yaml:"steps"`
 }
 
-func (l StepList) Execute() error {
-	for _, step := range l {
+func (l *StepList) Execute() error {
+	if l == nil {
+		return nil
+	}
+	for _, step := range l.Steps {
 		if err := step.Execute(); err != nil {
 			return &Error{
 				Message:  "failed to execute step",

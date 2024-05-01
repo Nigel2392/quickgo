@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	github.com/Nigel2392/typeutils v1.1.1
+	github.com/pkg/errors v0.9.1
 	github.com/yuin/goldmark v1.5.6
 	gopkg.in/yaml.v3 v3.0.1
 )
