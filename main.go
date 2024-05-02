@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -14,11 +15,20 @@ import (
 )
 
 type Flagger struct {
-	Project   config.Project
-	Config    config.QuickGo
-	Exclude   arrayFlags
+	// Optional overrides for the project.
+	Project config.Project
+
+	// Optional overrides for the config.
+	Config config.QuickGo
+
+	// Files to exclude from the project.
+	Exclude arrayFlags
+
+	// The target directory to write the project to.
 	TargetDir string
-	Verbose   bool
+
+	// Log verbose output
+	Verbose bool
 
 	// Used to pass in the quickgo template
 	Import string
@@ -163,9 +173,36 @@ func main() {
 		}
 	case flagger.Use != "":
 
+		// Parse optional extra context provided by CLI arguments.
+		var ctx = make(map[string]any)
+		var parseCtx = false
+		for _, arg := range os.Args {
+			arg = strings.TrimSpace(arg)
+			if parseCtx {
+				var args = strings.Split(arg, "=")
+				if len(args) == 2 {
+					ctx[args[0]] = args[1]
+				} else {
+					ctx[arg] = true
+				}
+				continue
+			}
+			if arg == "/" {
+				parseCtx = true
+				continue
+			}
+		}
+
 		var proj, close, err = qg.ReadProjectConfig(flagger.Use)
 		if err != nil {
 			panic(fmt.Errorf("failed to read project config: %w", err))
+		}
+
+		// Copy over the CLI context to the project context.
+		if proj.Context == nil {
+			proj.Context = ctx
+		} else {
+			maps.Copy(proj.Context, ctx)
 		}
 
 		defer close()
@@ -200,13 +237,18 @@ func main() {
 			panic(fmt.Errorf("failed to list projects: %w", err))
 		}
 
-		fmt.Println(quickgo.Craft(quickgo.CMD_Blue, "Projects:"))
+		fmt.Println(quickgo.Craft(quickgo.CMD_Red, "Projects:"))
 		for _, proj := range projects {
-			fmt.Printf("  %s\n", proj)
+			fmt.Printf("  - %s\n", quickgo.Craft(
+				quickgo.CMD_Blue, proj,
+			))
 		}
-		fmt.Print(quickgo.CMD_Reset)
 
 	case flagger.Serve:
+
+		flagger.CopyConfig(
+			qg.Config,
+		)
 
 		var addr = fmt.Sprintf(
 			"%s:%s",
@@ -220,7 +262,10 @@ func main() {
 
 		if qg.Config.TLSKey != "" && qg.Config.TLSCert != "" {
 			fmt.Printf("Serving on https://%s\n", addr)
-			err = server.ListenAndServeTLS(qg.Config.TLSCert, qg.Config.TLSKey)
+			err = server.ListenAndServeTLS(
+				qg.Config.TLSCert,
+				qg.Config.TLSKey,
+			)
 		} else {
 			fmt.Printf("Serving on http://%s\n", addr)
 			err = server.ListenAndServe()

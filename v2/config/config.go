@@ -38,7 +38,7 @@ type (
 		Name string `yaml:"name" json:"name"`
 
 		// Optional context for project templates.
-		Context map[string]string `yaml:"context" json:"context"`
+		Context map[string]any `yaml:"context" json:"context"`
 
 		// List of commands to run
 		BeforeCopy *command.StepList `yaml:"beforeCopy" json:"beforeCopy"`
@@ -69,7 +69,7 @@ func init() {
 func ExampleProjectConfig() *Project {
 	return &Project{
 		Name: "my-project",
-		Context: map[string]string{
+		Context: map[string]any{
 			"Name": "My Project",
 		},
 		Exclude: []string{

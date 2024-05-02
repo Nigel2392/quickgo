@@ -491,14 +491,39 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch {
 	case primary == "projects":
+
 		a.serveProjects(w, r, pathParts[1:])
+
+	case primary == "favicon.ico" && len(pathParts) == 1:
+
+		// Write out the favicon file.
+		// No need to log the happy path here, quite boring.
+		var f, err = staticFS.Open("quickgo.png")
+		if err != nil {
+			logger.Errorf("Failed to open 'quickgo.png': %v", err)
+			http.Error(w, "Failed to open 'quickgo.png'", http.StatusInternalServerError)
+			return
+		}
+		defer f.Close()
+
+		w.Header().Set("Content-Type", "image/x-icon")
+		if _, err = io.Copy(w, f); err != nil {
+			logger.Errorf("Failed to read 'quickgo.png': %v", err)
+			http.Error(w, "Failed to read 'quickgo.png'", http.StatusInternalServerError)
+		}
+
 	case primary == "static":
+
+		// Serve static files.
 		logger.Debugf("Serving static file %s", r.URL.Path)
 		// Serve from embedded file system.
 		var handler = http.FileServer(http.FS(staticFS))
 		handler = http.StripPrefix("/static/", handler)
 		handler.ServeHTTP(w, r)
+
 	default:
+
+		logger.Debugf("Invalid request path '%s'", r.URL.Path)
 		http.Error(w, "Invalid path", http.StatusBadRequest)
 	}
 }
@@ -555,11 +580,13 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request, pathParts []
 	)
 
 	if _, err = io.Copy(b, file); err != nil {
+		logger.Errorf("Failed to read file '%s': %v", file.GetPath(), err)
 		http.Error(w, "Failed to read file", http.StatusInternalServerError)
 		return
 	}
 
 	if tpl, err = html_template.ParseFS(embedFS, a.Patterns...); err != nil {
+		logger.Errorf("Failed to parse template: %v", err)
 		http.Error(w, "Failed to parse file", http.StatusInternalServerError)
 		return
 	}
@@ -570,6 +597,7 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request, pathParts []
 	}
 
 	if err = tpl.ExecuteTemplate(w, "base", context); err != nil {
+		logger.Errorf("Failed to execute template: %v", err)
 		http.Error(w, "Failed to execute template", http.StatusInternalServerError)
 		return
 	}

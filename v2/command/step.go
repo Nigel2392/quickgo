@@ -17,7 +17,7 @@ type Step struct {
 }
 
 // Execute runs the command.
-func (s Step) Execute(env map[string]string) error {
+func (s Step) Execute(env map[string]any) error {
 	var (
 		envSlice = make([]string, 0, len(env))
 		args     = slices.Clone(s.Args)
@@ -30,7 +30,14 @@ func (s Step) Execute(env map[string]string) error {
 
 	for i, arg := range args {
 		args[i] = os.Expand(arg, func(key string) string {
-			return env[key]
+			var val, ok = env[key]
+			if !ok {
+				return ""
+			}
+			if s, ok := val.(string); ok {
+				return s
+			}
+			return fmt.Sprintf("%v", val)
 		})
 	}
 

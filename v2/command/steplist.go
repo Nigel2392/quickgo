@@ -6,7 +6,7 @@ type StepList struct {
 	Steps []Step `yaml:"steps"`
 }
 
-func (l *StepList) Execute(env map[string]string) error {
+func (l *StepList) Execute(env map[string]any) error {
 	if l == nil {
 		return nil
 	}
