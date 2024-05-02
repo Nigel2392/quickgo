@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/Nigel2392/quickgo/v2"
@@ -20,11 +22,21 @@ type Flagger struct {
 
 	// Used to pass in the quickgo template
 	Import string
+
 	// Used to pass in the quickgo template
 	Use string
+
+	// List the projects available for use
+	ListProjects bool
+
+	// Write an example project configuration
+	Example bool
+
+	// Serve the project over HTTP
+	Serve bool
 }
 
-func (f *Flagger) Copy(proj *config.Project, conf *config.QuickGo) {
+func (f *Flagger) CopyProject(proj *config.Project) {
 	if f.Project.DelimLeft != "" {
 		proj.DelimLeft = f.Project.DelimLeft
 	}
@@ -34,6 +46,9 @@ func (f *Flagger) Copy(proj *config.Project, conf *config.QuickGo) {
 	if f.Project.Exclude != nil {
 		proj.Exclude = f.Project.Exclude
 	}
+}
+
+func (f *Flagger) CopyConfig(conf *config.QuickGo) {
 	if f.Config.Host != "" {
 		conf.Host = f.Config.Host
 	}
@@ -87,6 +102,9 @@ func main() {
 	flagSet.StringVar(&flagger.TargetDir, "d", "", "The target directory to write the project to.")
 	flagSet.StringVar(&flagger.Import, "get", "", "Import the project from the current directory.")
 	flagSet.StringVar(&flagger.Use, "use", "", "Use the specified project configuration.")
+	flagSet.BoolVar(&flagger.Example, "example", false, "Print an example project configuration.")
+	flagSet.BoolVar(&flagger.ListProjects, "list", false, "List the projects available for use.")
+	flagSet.BoolVar(&flagger.Serve, "serve", false, "Serve the project over HTTP.")
 	flagSet.BoolVar(&flagger.Verbose, "v", false, "Enable verbose logging.")
 
 	quickgo.PrintLogo()
@@ -130,8 +148,10 @@ func main() {
 			panic(err)
 		}
 
-		flagger.Copy(
+		flagger.CopyProject(
 			qg.ProjectConfig,
+		)
+		flagger.CopyConfig(
 			qg.Config,
 		)
 
@@ -141,9 +161,6 @@ func main() {
 		if err != nil {
 			panic(fmt.Errorf("failed to write project config: %w", err))
 		}
-
-		return
-
 	case flagger.Use != "":
 
 		var proj, close, err = qg.ReadProjectConfig(flagger.Use)
@@ -157,6 +174,60 @@ func main() {
 		if err != nil {
 			panic(fmt.Errorf("failed to write project: %w", err))
 		}
-	}
+	case flagger.Example:
 
+		var example = config.ExampleProjectConfig()
+
+		flagger.CopyProject(
+			example,
+		)
+
+		err = config.WriteYaml(
+			example,
+			filepath.Join(
+				flagger.TargetDir,
+				config.PROJECT_CONFIG_NAME,
+			),
+		)
+
+		if err != nil {
+			panic(fmt.Errorf("failed to write example project config: %w", err))
+		}
+	case flagger.ListProjects:
+
+		var projects, err = qg.ListProjects()
+		if err != nil {
+			panic(fmt.Errorf("failed to list projects: %w", err))
+		}
+
+		fmt.Println(quickgo.Craft(quickgo.CMD_Blue, "Projects:"))
+		for _, proj := range projects {
+			fmt.Printf("  %s\n", proj)
+		}
+		fmt.Print(quickgo.CMD_Reset)
+
+	case flagger.Serve:
+
+		var addr = fmt.Sprintf(
+			"%s:%s",
+			qg.Config.Host,
+			qg.Config.Port,
+		)
+		var server = &http.Server{
+			Addr:    addr,
+			Handler: qg,
+		}
+
+		if qg.Config.TLSKey != "" && qg.Config.TLSCert != "" {
+			fmt.Printf("Serving on https://%s\n", addr)
+			err = server.ListenAndServeTLS(qg.Config.TLSCert, qg.Config.TLSKey)
+		} else {
+			fmt.Printf("Serving on http://%s\n", addr)
+			err = server.ListenAndServe()
+		}
+
+		if err != nil {
+			panic(fmt.Errorf("failed to start server: %w", err))
+		}
+	}
 }

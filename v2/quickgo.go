@@ -3,9 +3,11 @@ package quickgo
 import (
 	"archive/zip"
 	"bytes"
+	html_template "html/template"
 	"io"
 	"io/fs"
 	"maps"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -18,12 +20,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-var cliApplication *App
+var (
+	cliApplication *App
+)
 
 type (
 	App struct {
 		Config        *config.QuickGo `yaml:"config"`        // The configuration for QuickGo.
 		ProjectConfig *config.Project `yaml:"projectConfig"` // The configuration for the project.
+		Patterns      []string        `yaml:"patterns"`      // The patterns for the templates.
 		AppFS         fs.FS           `yaml:"-"`             // The file system for the app, resides in the executable directory.
 		ProjectFS     fs.FS           `yaml:"-"`             // The file system for the project, resides in the project (working) directory.
 	}
@@ -61,6 +66,11 @@ func LoadApp() (*App, error) {
 	var app = &App{
 		AppFS:     os.DirFS(quickGoDir),
 		ProjectFS: os.DirFS(wd),
+		Patterns: []string{
+			"_templates/base.tmpl",
+			"_templates/readme.tmpl",
+			"_templates/index.tmpl",
+		},
 	}
 
 	// Setup the global application to prevent multiple instances.
@@ -130,9 +140,16 @@ func (a *App) LoadProjectConfig(directory string) (err error) {
 }
 
 // Write an example configuration for the user.
-func (a *App) WriteExampleProjectConfig() error {
+func (a *App) WriteExampleProjectConfig(directory string) (err error) {
 	var example = config.ExampleProjectConfig()
-	return config.WriteYaml(example, config.PROJECT_CONFIG_NAME)
+
+	if directory == "" {
+		if directory, err = os.Getwd(); err != nil {
+			return err
+		}
+	}
+
+	return config.WriteYaml(example, filepath.Join(directory, config.PROJECT_CONFIG_NAME))
 }
 
 func (a *App) WriteProject(proj *config.Project, directory string, raw bool) error {
@@ -249,7 +266,6 @@ func (a *App) WriteProject(proj *config.Project, directory string, raw bool) err
 	logger.Infof("Finished copying project files to %s", projectDir)
 
 	return nil
-
 }
 
 func (a *App) WriteProjectConfig(proj *config.Project) error {
@@ -424,6 +440,147 @@ func (a *App) CopyFileContent(proj *config.Project, file *os.File, f *quickfs.FS
 	)
 }
 
+func (a *App) ListProjects() ([]string, error) {
+	var (
+		projects = make([]string, 0)
+		dirPath  = getProjectFilePath("", true)
+	)
+
+	dir, err := os.ReadDir(dirPath)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to read directory %s", dirPath)
+	}
+
+	for _, d := range dir {
+		if !d.IsDir() {
+			continue
+		}
+
+		var path = filepath.Join(dirPath, d.Name())
+		var configName = filepath.Join(path, config.PROJECT_CONFIG_NAME)
+		if _, err = os.Stat(configName); err != nil {
+			continue
+		}
+
+		projects = append(projects, d.Name())
+	}
+
+	return projects, nil
+}
+
+func (a *App) WriteFile(data []byte, path string) error {
+	path = filepath.Join(executableDir, config.QUICKGO_DIR, path)
+	return os.WriteFile(path, data, os.ModePerm)
+}
+
+func (a *App) ReadFile(path string) ([]byte, error) {
+	path = filepath.Join(executableDir, config.QUICKGO_DIR, path)
+	return os.ReadFile(path)
+}
+
+func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	go func() {
+		if err := recover(); err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
+	}()
+
+	var pathParts = strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	var primary = strings.ToLower(pathParts[0])
+
+	switch {
+	case primary == "projects":
+		a.serveProjects(w, r, pathParts[1:])
+	case primary == "static":
+		logger.Debugf("Serving static file %s", r.URL.Path)
+		// Serve from embedded file system.
+		var handler = http.FileServer(http.FS(staticFS))
+		handler = http.StripPrefix("/static/", handler)
+		handler.ServeHTTP(w, r)
+	default:
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+	}
+}
+
+type ProjectTemplateContext struct {
+	Project *config.Project
+	File    *quickfs.FSFile
+	Dir     *quickfs.FSDirectory
+}
+
+func (a *App) serveProjects(w http.ResponseWriter, r *http.Request, pathParts []string) {
+	var (
+		proj     *config.Project
+		fileLike quickfs.FileLike
+		err      error
+	)
+
+	if len(pathParts) == 0 {
+		logger.Debugf("Invalid request path '%s'", r.URL.Path)
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+
+	proj, closeFiles, err := a.ReadProjectConfig(pathParts[0])
+	if err != nil {
+		logger.Errorf("Failed to read project '%s': %v", pathParts[0], err)
+		http.Error(w, "Invalid project", http.StatusBadRequest)
+		return
+	}
+
+	defer closeFiles()
+
+	fileLike, err = proj.Root.Find(pathParts[1:])
+	if err != nil {
+		logger.Errorf("Failed to find file '%s': %v", path.Join(pathParts...), err)
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+
+	if fileLike.IsDir() {
+		// logger.Debugf("Invalid request path '%s', cannot open directory.", r.URL.Path)
+		// http.Error(w, "Invalid path", http.StatusBadRequest)
+
+		var dir = fileLike.(*quickfs.FSDirectory)
+		quickfs.PrintRoot(w, dir)
+
+		return
+	}
+
+	var (
+		tpl  *html_template.Template
+		file = fileLike.(*quickfs.FSFile)
+		b    = new(bytes.Buffer)
+	)
+
+	if _, err = io.Copy(b, file); err != nil {
+		http.Error(w, "Failed to read file", http.StatusInternalServerError)
+		return
+	}
+
+	if tpl, err = html_template.ParseFS(embedFS, a.Patterns...); err != nil {
+		http.Error(w, "Failed to parse file", http.StatusInternalServerError)
+		return
+	}
+
+	var context = ProjectTemplateContext{
+		Project: proj,
+		File:    file,
+	}
+
+	if err = tpl.ExecuteTemplate(w, "base", context); err != nil {
+		http.Error(w, "Failed to execute template", http.StatusInternalServerError)
+		return
+	}
+
+	// w.Header().Set("Content-Type", "application/octet-stream")
+	// w.Header().Set("Content-Disposition", "attachment; filename="+fileLike.GetPath())
+	// if _, err = io.Copy(w, fileLike.(*quickfs.FSFile)); err != nil {
+	// http.Error(w, "Failed to read file", http.StatusInternalServerError)
+	// }
+}
+
 func (a *App) executeTemplate(proj *config.Project, w io.Writer, content string) error {
 
 	var tpl = template.New("file")
@@ -445,16 +602,6 @@ func (a *App) executeTemplate(proj *config.Project, w io.Writer, content string)
 		"failed to execute template %s",
 		content,
 	)
-}
-
-func (a *App) WriteFile(data []byte, path string) error {
-	path = filepath.Join(executableDir, config.QUICKGO_DIR, path)
-	return os.WriteFile(path, data, os.ModePerm)
-}
-
-func (a *App) ReadFile(path string) ([]byte, error) {
-	path = filepath.Join(executableDir, config.QUICKGO_DIR, path)
-	return os.ReadFile(path)
 }
 
 func getProjectFilePath(name string, absolute bool) string {
