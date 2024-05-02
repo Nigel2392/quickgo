@@ -1,6 +1,6 @@
 package command
 
-import "github.com/Nigel2392/quickgo/v2/v2/logger"
+import "github.com/Nigel2392/quickgo/v2/logger"
 
 type StepList struct {
 	Steps []Step `yaml:"steps"`
