@@ -3,7 +3,6 @@ package quickgo
 import (
 	"archive/zip"
 	"bytes"
-	"fmt"
 	"io"
 	"io/fs"
 	"maps"
@@ -419,8 +418,6 @@ func (a *App) CopyFileContent(proj *config.Project, file *os.File, f *quickfs.FS
 	if err != nil {
 		return err
 	}
-
-	fmt.Println(len(content), f.Name)
 
 	return a.executeTemplate(
 		proj, file, string(content),
