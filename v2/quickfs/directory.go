@@ -35,6 +35,11 @@ type FSDirectory struct {
 	IsExcluded func(FileLike) bool
 }
 
+// Root returns the root directory.
+func (d *FSDirectory) Root() *FSDirectory {
+	return d.root
+}
+
 // String returns the directory in string format.
 func (d *FSDirectory) String() string {
 	var b strings.Builder
@@ -165,14 +170,19 @@ func (d *FSDirectory) AddDirectory(dirPath string) {
 	var (
 		ok    bool
 		_d    *FSDirectory
-		parts = strings.Split(dirPath, string(os.PathSeparator))
-		dir   = d
+		root  *FSDirectory = d.root
+		parts              = strings.Split(dirPath, string(os.PathSeparator))
+		dir                = d
 	)
+
+	if root == nil {
+		root = d
+	}
 
 	for _, part := range parts {
 		if _d, ok = dir.Directories[part]; !ok {
 			_d = NewFSDirectory(
-				part, filepath.Join(dir.Path, part), d.root,
+				part, filepath.Join(dir.Path, part), root,
 			)
 			dir.Directories[part] = _d
 		}

@@ -6,7 +6,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
-	"path/filepath"
 	"strings"
 	"unicode/utf8"
 )
@@ -46,20 +45,34 @@ func init() {
 	gob.Register(&FSFile{})
 }
 
-func printDir(w io.Writer, d *FSDirectory, indent int) {
+func printDir(w io.Writer, d *FSDirectory, indent int, indentString string, wrap func(int, FileLike) string) (count int) {
+	count += 1 + len(d.Files)
+
 	for _, dir := range d.Directories {
-		fmt.Fprintf(w, "%s%s%s\n", strings.Repeat(" ", indent), dir.GetName(), string(filepath.Separator))
-		printDir(w, dir, indent+2)
+		fmt.Fprintf(w,
+			"%s%s\n",
+			strings.Repeat(indentString, indent*2),
+			wrap(indent, dir),
+		)
+		count += printDir(w, dir, indent+1, indentString, wrap)
 	}
 
 	for _, f := range d.Files {
-		fmt.Fprintf(w, "%s%s\n", strings.Repeat(" ", indent), f.GetName())
+		fmt.Fprintf(w, "%s%s\n", strings.Repeat(indentString, indent*2), wrap(indent, f))
 	}
+
+	return count
 }
 
-func PrintRoot(w io.Writer, root *FSDirectory) {
-	fmt.Fprintf(w, "%s%s\n", root.GetName(), string(filepath.Separator))
-	printDir(w, root, 2)
+func PrintRoot(w io.Writer, root *FSDirectory) int {
+	return PrintRootFn(w, root, " ", func(_ int, fl FileLike) string {
+		return fl.GetName()
+	})
+}
+
+func PrintRootFn(w io.Writer, root *FSDirectory, indentString string, wrap func(int, FileLike) string) int {
+	fmt.Fprintf(w, "%s\n", wrap(0, root))
+	return 1 + printDir(w, root, 1, indentString, wrap)
 }
 
 func IsText(data []byte) bool {

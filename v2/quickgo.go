@@ -3,6 +3,7 @@ package quickgo
 import (
 	"archive/zip"
 	"bytes"
+	"fmt"
 	html_template "html/template"
 	"io"
 	"io/fs"
@@ -185,6 +186,7 @@ func (a *App) WriteProject(proj *config.Project, directory string, raw bool) err
 
 	projectDir = strings.ReplaceAll(projectDir, "\\", "/")
 
+	// Update the context - also found in config.go.*ProjectCommand.Command.
 	context["projectName"] = proj.Name
 	context["projectPath"] = projectDir
 
@@ -567,8 +569,36 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request, pathParts []
 		// logger.Debugf("Invalid request path '%s', cannot open directory.", r.URL.Path)
 		// http.Error(w, "Invalid path", http.StatusBadRequest)
 
+		w.Header().Set("Content-Type", "text/html")
+		w.Header().Set("Cache-Control", "no-cache")
 		var dir = fileLike.(*quickfs.FSDirectory)
-		quickfs.PrintRoot(w, dir)
+
+		if dir.Root() != nil {
+			fmt.Fprintf(w,
+				"<a href='/%s'>../%s</a><br>",
+				path.Join(
+					"projects",
+					proj.Name,
+				),
+				proj.Name,
+			)
+		}
+
+		quickfs.PrintRootFn(w, dir, "&nbsp;", func(indent int, fl quickfs.FileLike) string {
+			var (
+				p   = fl.GetPath()
+				url = filepath.ToSlash(
+					path.Join("projects", proj.Name, p),
+				)
+				name = fl.GetName()
+			)
+
+			if !strings.HasPrefix(url, "/") {
+				url = "/" + url
+			}
+
+			return fmt.Sprintf("<a href='%s' data-indent='%d'>%s</a><br>", url, indent, name)
+		})
 
 		return
 	}

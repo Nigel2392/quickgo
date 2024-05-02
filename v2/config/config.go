@@ -2,7 +2,10 @@ package config
 
 import (
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
+	"maps"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -19,6 +22,7 @@ const (
 
 	// Error messages.
 	ErrProjectMissing = ErrorStr("project config not found")
+	ErrCommandMissing = ErrorStr("command not found")
 )
 
 type (
@@ -41,8 +45,9 @@ type (
 		Context map[string]any `yaml:"context" json:"context"`
 
 		// List of commands to run
-		BeforeCopy *command.StepList `yaml:"beforeCopy" json:"beforeCopy"`
-		AfterCopy  *command.StepList `yaml:"afterCopy" json:"afterCopy"`
+		BeforeCopy *command.StepList          `yaml:"beforeCopy" json:"beforeCopy"`
+		AfterCopy  *command.StepList          `yaml:"afterCopy" json:"afterCopy"`
+		Commands   map[string]*ProjectCommand `yaml:"commands" json:"commands"` // [name] => [steps]
 
 		// Variable delimiters for the project templates.
 		DelimLeft  string `yaml:"delimLeft" json:"delimLeft"`
@@ -53,6 +58,18 @@ type (
 
 		// The root directory.
 		Root *quickfs.FSDirectory `yaml:"-"`
+	}
+
+	// ProjectCommand represents a command for a project.
+	ProjectCommand struct {
+		// The name of the command.
+		// Only used internally for logging purposes.
+		name string `yaml:"-" json:"-"`
+		// Args are the arguments to pass to the command.
+		// These will be asked via stdin if not provided.
+		Args map[string]any `yaml:"args" json:"args"`
+		// The steps to run for the command.
+		Steps *command.StepList `yaml:"steps" json:"steps"`
 	}
 )
 
@@ -107,7 +124,57 @@ func ExampleProjectConfig() *Project {
 				},
 			},
 		},
+		Commands: map[string]*ProjectCommand{
+			"echoName": {
+				Args: map[string]any{
+					"customProjectName": "$projectName",
+				},
+				Steps: &command.StepList{
+					Steps: []command.Step{
+						{
+							Name:    "Echo Project Name",
+							Command: "echo",
+							Args:    []string{"$customProjectName"},
+						},
+					},
+				},
+			},
+		},
 	}
+}
+
+func (p *Project) Command(name string, context map[string]any) (*ProjectCommand, error) {
+	var cmd, ok = p.Commands[name]
+	if !ok {
+		return nil, ErrCommandMissing
+	}
+
+	if cmd.Args == nil {
+		cmd.Args = make(map[string]any)
+	}
+
+	cmd.name = name
+	cmd.Args["projectName"] = p.Name
+	cmd.Args["projectPath"], _ = os.Getwd()
+
+	for k, v := range p.Context {
+		cmd.Args[k] = v
+	}
+
+	for k, v := range context {
+		cmd.Args[k] = v
+	}
+
+	return cmd, nil
+}
+
+// Execute executes the project commands.
+func (p *Project) ExecCommand(commandName string, env map[string]any) error {
+	var cmd, err = p.Command(commandName, env)
+	if err != nil {
+		return err
+	}
+	return cmd.Execute(env)
 }
 
 // Load loads the project configuration.
@@ -143,4 +210,26 @@ func (p *Project) IsExcluded(fl quickfs.FileLike) bool {
 		}
 	}
 	return false
+}
+
+// Execute executes the project command.
+func (c *ProjectCommand) Execute(env map[string]any) error {
+	if c.Steps == nil {
+		return nil
+	}
+
+	var newEnv = make(map[string]any)
+	maps.Copy(newEnv, c.Args)
+	maps.Copy(newEnv, env)
+
+	for k, v := range newEnv {
+		if s, ok := v.(string); ok {
+			newEnv[k] = command.ExpandArg(s, newEnv)
+		}
+	}
+
+	var jsonData, _ = json.MarshalIndent(newEnv, "", "  ")
+	logger.Debugf("Running command '%s' with environment: %s", c.name, jsonData)
+
+	return c.Steps.Execute(newEnv)
 }

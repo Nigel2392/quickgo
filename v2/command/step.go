@@ -1,6 +1,7 @@
 package command
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -29,16 +30,7 @@ func (s Step) Execute(env map[string]any) error {
 	}
 
 	for i, arg := range args {
-		args[i] = os.Expand(arg, func(key string) string {
-			var val, ok = env[key]
-			if !ok {
-				return ""
-			}
-			if s, ok := val.(string); ok {
-				return s
-			}
-			return fmt.Sprintf("%v", val)
-		})
+		args[i] = ExpandArg(arg, env)
 	}
 
 	var cmd = exec.Command(s.Command, args...)
@@ -49,4 +41,23 @@ func (s Step) Execute(env map[string]any) error {
 	cmd.Stdout = logger.Global()
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+// ExpandArgs expands the arguments.
+func ExpandArg(arg string, env map[string]any) string {
+
+	return os.Expand(arg, func(key string) string {
+		var val, ok = env[key]
+		if !ok {
+			return ""
+		}
+		if s, ok := val.(string); ok {
+			return s
+		}
+		var v, err = json.Marshal(val)
+		if err != nil {
+			return fmt.Sprintf("%v", val)
+		}
+		return string(v)
+	})
 }

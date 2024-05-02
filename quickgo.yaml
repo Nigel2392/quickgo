@@ -1,11 +1,11 @@
 name: my-project
 context:
     Name: My Project
-    Test: "${{ .Name }}"
-    Test2: '${{ index .Context "Test" }} ${{ index .Context "Test2" }}'
-
-delimLeft: '${{'
-delimRight: '}}'
+    Data:
+        Name1: My Project
+        Path1: /path/to/my-project
+        Name2: My Project 2
+        Path2: /path/to/my-project-2
 
 beforeCopy:
     steps:
@@ -17,7 +17,6 @@ beforeCopy:
           command: echo
           args:
             - $projectPath
-
 afterCopy:
     steps:
         - name: Echo Project Name After
@@ -28,11 +27,20 @@ afterCopy:
           command: echo
           args:
             - $projectPath
-
+commands:
+    echoName:
+        args:
+            customProjectName: $Data
+            customProjectName1:
+        steps:
+            steps:
+                - name: Echo Project Name
+                  command: echo
+                  args:
+                    - $customProjectName
+delimLeft: ${{
+delimRight: '}}'
 exclude:
     - '*node_modules*'
     - '*dist*'
-    - '.git'
-    - '.quickgo'
-    - '.github'
-    - 'test'
+    - ./.git

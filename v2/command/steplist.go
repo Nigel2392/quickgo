@@ -10,8 +10,8 @@ func (l *StepList) Execute(env map[string]any) error {
 	if l == nil {
 		return nil
 	}
-	for i, step := range l.Steps {
-		logger.Infof("%d: %s", i, step.Name)
+	for _, step := range l.Steps {
+		logger.Info(step.Name)
 		if err := step.Execute(env); err != nil {
 			return &Error{
 				Message:  "failed to execute step",

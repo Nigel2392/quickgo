@@ -1,12 +1,14 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Nigel2392/quickgo/v2"
@@ -174,24 +176,7 @@ func main() {
 	case flagger.Use != "":
 
 		// Parse optional extra context provided by CLI arguments.
-		var ctx = make(map[string]any)
-		var parseCtx = false
-		for _, arg := range os.Args {
-			arg = strings.TrimSpace(arg)
-			if parseCtx {
-				var args = strings.Split(arg, "=")
-				if len(args) == 2 {
-					ctx[args[0]] = args[1]
-				} else {
-					ctx[arg] = true
-				}
-				continue
-			}
-			if arg == "/" {
-				parseCtx = true
-				continue
-			}
-		}
+		var ctx = parseCommandlineContext(flagSet.Args(), false)
 
 		var proj, close, err = qg.ReadProjectConfig(flagger.Use)
 		if err != nil {
@@ -274,5 +259,72 @@ func main() {
 		if err != nil {
 			panic(fmt.Errorf("failed to start server: %w", err))
 		}
+	default:
+
+		// Parse commands for the project itself.
+		var args = flagSet.Args()
+		if len(args) == 0 {
+			flagSet.Usage()
+			os.Exit(1)
+		}
+
+		var (
+			cmd     *config.ProjectCommand
+			command = args[0]
+			ctx     = parseCommandlineContext(args[1:], true)
+			err     = qg.LoadProjectConfig(".")
+		)
+		if err != nil {
+			panic(fmt.Errorf("failed to read project config: %w", err))
+		}
+
+		cmd, err = qg.ProjectConfig.Command(command, nil)
+		if err != nil && errors.Is(err, config.ErrCommandMissing) {
+			fmt.Printf("Command '%s' not found\n", command)
+
+			if len(qg.ProjectConfig.Commands) == 0 {
+				fmt.Println("No commands available for this project.")
+				os.Exit(1)
+			}
+
+			var commands = make([]string, 0, len(qg.ProjectConfig.Commands))
+			for k := range qg.ProjectConfig.Commands {
+				commands = append(commands, k)
+			}
+			slices.Sort(commands)
+			fmt.Println("Available commands:")
+			for _, c := range commands {
+				fmt.Printf("  - %s\n", c)
+			}
+			os.Exit(1)
+		} else if err != nil {
+			panic(fmt.Errorf("failed to get command: %w", err))
+		}
+
+		err = cmd.Execute(ctx)
+		if err != nil {
+			panic(err)
+		}
 	}
+}
+
+func parseCommandlineContext(args []string, parseCtxImmediately bool) map[string]any {
+	var ctx = make(map[string]any)
+	for _, arg := range args {
+		arg = strings.TrimSpace(arg)
+		if parseCtxImmediately {
+			var args = strings.Split(arg, "=")
+			if len(args) == 2 {
+				ctx[args[0]] = args[1]
+			} else {
+				ctx[arg] = true
+			}
+			continue
+		}
+		if arg == "/" {
+			parseCtxImmediately = true
+			continue
+		}
+	}
+	return ctx
 }
