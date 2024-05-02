@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Nigel2392/quickgo/v2/command"
-	"github.com/Nigel2392/quickgo/v2/logger"
-	"github.com/Nigel2392/quickgo/v2/quickfs"
+	"github.com/Nigel2392/quickgo/v2/v2/command"
+	"github.com/Nigel2392/quickgo/v2/v2/logger"
+	"github.com/Nigel2392/quickgo/v2/v2/quickfs"
 )
 
 const (
