@@ -17,14 +17,14 @@ type Flagger struct {
 	Exclude   arrayFlags
 	TargetDir string
 	Verbose   bool
-	Import    bool
-	Use       bool
+
+	// Used to pass in the quickgo template
+	Import string
+	// Used to pass in the quickgo template
+	Use string
 }
 
 func (f *Flagger) Copy(proj *config.Project, conf *config.QuickGo) {
-	if f.Project.Name != "" {
-		proj.Name = f.Project.Name
-	}
 	if f.Project.DelimLeft != "" {
 		proj.DelimLeft = f.Project.DelimLeft
 	}
@@ -75,7 +75,6 @@ func main() {
 		qg      *quickgo.App
 	)
 
-	flagSet.StringVar(&flagger.Project.Name, "n", "", "The name of the project.")
 	flagSet.StringVar(&flagger.Project.DelimLeft, "delim-left", "", "The left delimiter for the project templates.")
 	flagSet.StringVar(&flagger.Project.DelimRight, "delim-right", "", "The right delimiter for the project templates.")
 
@@ -86,9 +85,9 @@ func main() {
 
 	flagSet.Var(&flagger.Exclude, "e", "A list of files to exclude from the project in glob format.")
 	flagSet.StringVar(&flagger.TargetDir, "d", "", "The target directory to write the project to.")
-	flagSet.BoolVar(&flagger.Import, "get", false, "Import the project from the current directory.")
+	flagSet.StringVar(&flagger.Import, "get", "", "Import the project from the current directory.")
+	flagSet.StringVar(&flagger.Use, "use", "", "Use the specified project configuration.")
 	flagSet.BoolVar(&flagger.Verbose, "v", false, "Enable verbose logging.")
-	flagSet.BoolVar(&flagger.Use, "use", false, "Use the specified project configuration.")
 
 	quickgo.PrintLogo()
 
@@ -119,7 +118,7 @@ func main() {
 	}
 
 	switch {
-	case flagger.Import:
+	case flagger.Import != "":
 
 		err = qg.LoadProjectConfig(".")
 		if err != nil {
@@ -136,6 +135,8 @@ func main() {
 			qg.Config,
 		)
 
+		qg.ProjectConfig.Name = flagger.Import
+
 		err = qg.WriteProjectConfig(qg.ProjectConfig)
 		if err != nil {
 			panic(fmt.Errorf("failed to write project config: %w", err))
@@ -143,21 +144,14 @@ func main() {
 
 		return
 
-	case flagger.Use:
+	case flagger.Use != "":
 
-		if flagger.Project.Name == "" {
-			fmt.Println("No project name specified.")
-			os.Exit(1)
-		}
-
-		var proj, close, err = qg.ReadProjectConfig(flagger.Project.Name)
+		var proj, close, err = qg.ReadProjectConfig(flagger.Use)
 		if err != nil {
 			panic(fmt.Errorf("failed to read project config: %w", err))
 		}
 
 		defer close()
-
-		fmt.Printf("Using project: %s %+v\n", proj.Name, proj)
 
 		err = qg.WriteProject(proj, flagger.TargetDir, false)
 		if err != nil {
