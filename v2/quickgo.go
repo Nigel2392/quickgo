@@ -3,6 +3,7 @@ package quickgo
 import (
 	"archive/zip"
 	"bytes"
+	"fmt"
 	"io"
 	"io/fs"
 	"maps"
@@ -55,26 +56,34 @@ func LoadApp() (*App, error) {
 		return nil, err
 	}
 
+	// Check for the application config directory.
 	var quickGoDir = filepath.Join(executableDir, QUICKGO_DIR)
 	var projectDir = filepath.Join(executableDir, QUICKGO_DIR, "projects")
 	_, err = os.Stat(projectDir)
 
+	// Create the application config directory if it does not exist.
 	if err != nil && os.IsNotExist(err) {
+
 		logger.Infof("Creating new config directory %s", projectDir)
+
 		if err = os.MkdirAll(projectDir, os.ModePerm); err != nil {
 			return nil, err
 		}
+
 	} else if err != nil {
 		return nil, err
 	}
 
+	// Initialize the application with the proper file systems.
 	var app = &App{
 		AppFS:     os.DirFS(quickGoDir),
 		ProjectFS: os.DirFS(wd),
 	}
 
+	// Setup the global application to prevent multiple instances.
 	cliApplication = app
 
+	// Load the QuickGo configuration.
 	var configPath = filepath.Join(
 		executableDir, QUICKGO_DIR, QUICKGO_CONFIG_NAME,
 	)
@@ -84,6 +93,7 @@ func LoadApp() (*App, error) {
 		QUICKGO_CONFIG_NAME,
 	)
 	if err != nil {
+		// Create a new config file if it does not exist.
 		if !os.IsNotExist(err) {
 			return nil, errors.Wrapf(err, "failed to load config file %s", configPath)
 		}
@@ -106,11 +116,12 @@ func LoadApp() (*App, error) {
 	return app, nil
 }
 
+// Load the project configuration from the current working directory.
 func (a *App) LoadProjectConfig() error {
 
 	logger.Debugf("Loading project config: %s", PROJECT_CONFIG_NAME)
 
-	proj, err := config.LoadYamlFS[config.Project](
+	var proj, err = config.LoadYamlFS[config.Project](
 		a.ProjectFS,
 		PROJECT_CONFIG_NAME,
 	)
@@ -127,28 +138,10 @@ func (a *App) LoadProjectConfig() error {
 	return nil
 }
 
+// Write an example configuration for the user.
 func (a *App) WriteExampleProjectConfig() error {
 	var example = config.ExampleProjectConfig()
 	return config.WriteYaml(example, PROJECT_CONFIG_NAME)
-}
-
-func getProjectFilePath(name string, absolute bool) string {
-	var p string
-	if absolute {
-		p = path.Join(
-			executableDir,
-			QUICKGO_DIR,
-			"projects",
-			name,
-		)
-	} else {
-		p = path.Join(
-			"projects",
-			name,
-		)
-	}
-
-	return strings.ReplaceAll(p, "\\", "/")
 }
 
 func (a *App) WriteProject(proj *config.Project, directory string) error {
@@ -158,6 +151,7 @@ func (a *App) WriteProject(proj *config.Project, directory string) error {
 		err error
 	)
 
+	// The directory to copy the project files to.
 	if directory == "" {
 		cwd, err = os.Getwd()
 		if err != nil {
@@ -167,37 +161,63 @@ func (a *App) WriteProject(proj *config.Project, directory string) error {
 		cwd = directory
 	}
 
+	// Setup context for project templates.
+	// Also setup the directory paths.
 	var (
 		context    = maps.Clone(proj.Context)
 		projectDir = filepath.Join(cwd, proj.Name)
 	)
+
+	if !filepath.IsAbs(projectDir) {
+		projectDir, err = filepath.Abs(projectDir)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get absolute path for %s", projectDir)
+		}
+	}
 
 	projectDir = strings.ReplaceAll(projectDir, "\\", "/")
 
 	context["projectName"] = proj.Name
 	context["projectPath"] = projectDir
 
+	// Run commands before copying the project files.
 	if err = a.ProjectConfig.BeforeCopy.Execute(context); err != nil {
 		return errors.Wrap(err, "failed to execute before copy steps")
 	}
 
+	// Create the project directory.
+	// This is located in <cwd>/<projectName>.
 	if err = os.MkdirAll(projectDir, os.ModePerm); err != nil {
 		return errors.Wrapf(err, "failed to create project directory %s", projectDir)
 	}
 
 	logger.Infof("Copying project files to %s", projectDir)
 
+	// Loop over all files in the project.
+	// This gets recursively called by subdirectories.
 	_, err = proj.Root.ForEach(func(fl quickfs.FileLike) (cancel bool, err error) {
 		var p = fl.GetPath()
-		if strings.Contains(p, "$$PROJECT_NAME$$") {
-			p = strings.ReplaceAll(p, "$$PROJECT_NAME$$", proj.Name)
-		}
-		var path = path.Join(projectDir, p)
+		var b = new(bytes.Buffer)
 
-		logger.Debugf("Copying %s to %s (isDir=%v)", fl.GetPath(), path, fl.IsDir())
+		err = a.executeTemplate(
+			"file", b, p,
+		)
+		if err != nil {
+			return true, errors.Wrapf(err, "failed to execute template for filename %s", p)
+		}
+
+		var path = path.Join(projectDir, b.String())
+
+		logger.Debugf("Copying %s to %s (isDir=%v)",
+			pathForLog(fl.GetPath()),
+			pathForLog(path),
+			fl.IsDir(),
+		)
 
 		switch f := fl.(type) {
 		case *quickfs.FSFile:
+			// Copy the file content to the new file.
+			// Replace any template variables.
 			var dir = filepath.Dir(path)
 			if err = os.MkdirAll(dir, os.ModePerm); err != nil {
 				return true, errors.Wrapf(err, "failed to create directory %s", dir)
@@ -214,12 +234,16 @@ func (a *App) WriteProject(proj *config.Project, directory string) error {
 			}
 
 		case *quickfs.FSDirectory:
+			// Create a new subdirectory inside of the project directory.
 			if err = os.MkdirAll(path, os.ModePerm); err != nil {
 				return true, errors.Wrapf(err, "failed to create directory %s", path)
 			}
 		}
 
-		logger.Debugf("Copied %s to %s", fl.GetPath(), path)
+		logger.Debugf("Copied %s to %s",
+			pathForLog(fl.GetPath()),
+			pathForLog(path),
+		)
 
 		return false, nil
 	})
@@ -229,6 +253,7 @@ func (a *App) WriteProject(proj *config.Project, directory string) error {
 		return err
 	}
 
+	// Run commands after copying the project files.
 	err = a.ProjectConfig.AfterCopy.Execute(context)
 	if err != nil {
 		return errors.Wrap(err, "failed to execute after copy steps")
@@ -385,26 +410,46 @@ func (a *App) CopyFileContent(file *os.File, f *quickfs.FSFile) error {
 		return err
 	}
 
-	f.IsText = quickfs.IsText(b.Bytes())
+	f.IsText = quickfs.IsText(b.Bytes()) && !strings.HasSuffix(
+		f.Name, PROJECT_CONFIG_NAME,
+	)
 
 	if !f.IsText {
 		_, err := io.Copy(file, b)
 		return err
 	}
 
-	var tpl = template.New("file")
-	tpl.Delims("${{", "}}")
-
 	content, err := io.ReadAll(b)
 	if err != nil {
 		return err
 	}
 
-	if _, err = tpl.Parse(string(content)); err != nil {
-		return err
+	return a.executeTemplate(
+		"file", file, string(content),
+	)
+}
+
+func (a *App) executeTemplate(name string, w io.Writer, content string) error {
+
+	var tpl = template.New(name)
+	tpl.Delims(
+		a.ProjectConfig.DelimLeft,
+		a.ProjectConfig.DelimRight,
+	)
+
+	if _, err := tpl.Parse(content); err != nil {
+		return errors.Wrapf(
+			err,
+			"failed to parse template %s",
+			content,
+		)
 	}
 
-	return tpl.Execute(file, a.ProjectConfig)
+	return errors.Wrapf(
+		tpl.Execute(w, a.ProjectConfig),
+		"failed to execute template %s",
+		content,
+	)
 }
 
 func (a *App) WriteFile(data []byte, path string) error {
@@ -415,4 +460,34 @@ func (a *App) WriteFile(data []byte, path string) error {
 func (a *App) ReadFile(path string) ([]byte, error) {
 	path = filepath.Join(executableDir, QUICKGO_DIR, path)
 	return os.ReadFile(path)
+}
+
+func pathForLog(p string) string {
+	var parts = filepath.SplitList(p)
+	if len(parts) < 3 {
+		return p
+	}
+	if len(parts) == 3 {
+		return fmt.Sprintf("%s/.../%s", parts[0], parts[2])
+	}
+	return fmt.Sprintf("%s/.../%s", parts[0], parts[len(parts)-1])
+}
+
+func getProjectFilePath(name string, absolute bool) string {
+	var p string
+	if absolute {
+		p = path.Join(
+			executableDir,
+			QUICKGO_DIR,
+			"projects",
+			name,
+		)
+	} else {
+		p = path.Join(
+			"projects",
+			name,
+		)
+	}
+
+	return strings.ReplaceAll(p, "\\", "/")
 }

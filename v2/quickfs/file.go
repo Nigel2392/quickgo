@@ -16,6 +16,8 @@ type FSFile struct {
 	IsText bool
 
 	Reader io.ReadCloser
+
+	readFrom bool
 }
 
 // NewFSFile creates a new FSFile.
@@ -23,6 +25,9 @@ func NewFile(name, path string) (File, error) {
 	return NewFSFile(name, path, nil)
 }
 
+// NewFSFile creates a new FSFile.
+// If root is not nil, it will check if the file is excluded.
+// The file must always be closed after calling this function.
 func NewFSFile(name, path string, root *FSDirectory) (*FSFile, error) {
 	var f *FSFile = &FSFile{
 		Name: name,
@@ -56,6 +61,10 @@ func (f *FSFile) GetPath() string {
 }
 
 func (f *FSFile) Read(p []byte) (n int, err error) {
+	if f.readFrom {
+		return 0, io.EOF
+	}
+	f.readFrom = true
 	return f.Reader.Read(p)
 }
 

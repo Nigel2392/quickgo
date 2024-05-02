@@ -4,6 +4,9 @@ context:
     Test: "${{ .Name }}"
     Test2: '${{ index .Context "Test" }} ${{ index .Context "Test2" }}'
 
+delimLeft: '${{'
+delimRight: '}}'
+
 beforeCopy:
     steps:
         - name: Echo Project Name Before

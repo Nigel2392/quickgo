@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/gob"
+	"fmt"
 	"path/filepath"
 
 	"github.com/Nigel2392/quickgo/v2/command"
@@ -30,9 +31,9 @@ type (
 		BeforeCopy *command.StepList `yaml:"beforeCopy" json:"beforeCopy"`
 		AfterCopy  *command.StepList `yaml:"afterCopy" json:"afterCopy"`
 
-		// // Variable delimiters for the project templates.
-		// DelimLeft  string `yaml:"delimLeft" json:"delimLeft"`
-		// DelimRight string `yaml:"delimRight" json:"delimRight"`
+		// Variable delimiters for the project templates.
+		DelimLeft  string `yaml:"delimLeft" json:"delimLeft"`
+		DelimRight string `yaml:"delimRight" json:"delimRight"`
 
 		// A list of files to exclude from the project in glob format.
 		Exclude []string `yaml:"exclude" json:"exclude"` // (NYI)
@@ -58,6 +59,8 @@ func ExampleProjectConfig() *Project {
 			"*dist*",
 			"./.git",
 		},
+		DelimLeft:  "${{",
+		DelimRight: "}}",
 		BeforeCopy: &command.StepList{
 			Steps: []command.Step{
 				{
@@ -92,7 +95,7 @@ func ExampleProjectConfig() *Project {
 // Load loads the project configuration.
 func (p *Project) Load(projectDirectory string) error {
 	p.Root = quickfs.NewFSDirectory(
-		"$$PROJECT_NAME$$",
+		fmt.Sprintf("%s .Name %s", p.DelimLeft, p.DelimRight),
 		projectDirectory,
 		nil,
 	)
