@@ -49,6 +49,9 @@ type Flagger struct {
 }
 
 func (f *Flagger) CopyProject(proj *config.Project) {
+	if f.Project.Name != "" {
+		proj.Name = f.Project.Name
+	}
 	if f.Project.DelimLeft != "" {
 		proj.DelimLeft = f.Project.DelimLeft
 	}
@@ -102,6 +105,7 @@ func main() {
 		qg      *quickgo.App
 	)
 
+	flagSet.StringVar(&flagger.Project.Name, "name", "", "The name of the project.")
 	flagSet.StringVar(&flagger.Project.DelimLeft, "delim-left", "", "The left delimiter for the project templates.")
 	flagSet.StringVar(&flagger.Project.DelimRight, "delim-right", "", "The right delimiter for the project templates.")
 
@@ -192,6 +196,10 @@ func main() {
 
 		defer close()
 
+		flagger.CopyProject(
+			proj,
+		)
+
 		err = qg.WriteProject(proj, flagger.TargetDir, false)
 		if err != nil {
 			panic(fmt.Errorf("failed to write project: %w", err))
@@ -203,6 +211,19 @@ func main() {
 		flagger.CopyProject(
 			example,
 		)
+
+		if s, err := os.Stat(filepath.Join(flagger.TargetDir, config.PROJECT_CONFIG_NAME)); err == nil {
+			var abs, _ = filepath.Abs(s.Name())
+			fmt.Printf("Project configuration file already exists at '%s'\n", abs)
+			var overwrite string
+			for overwrite != "y" && overwrite != "n" {
+				fmt.Print("Overwrite? [y/n]: ")
+				fmt.Scanln(&overwrite)
+			}
+			if overwrite == "n" {
+				os.Exit(1)
+			}
+		}
 
 		err = config.WriteYaml(
 			example,
@@ -292,7 +313,7 @@ func main() {
 				commands = append(commands, k)
 			}
 			slices.Sort(commands)
-			fmt.Println("Available commands:")
+			fmt.Println("Available project commands (run quickgo -h to see application commands):")
 			for _, c := range commands {
 				fmt.Printf("  - %s\n", c)
 			}
