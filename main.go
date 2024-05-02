@@ -11,7 +11,7 @@ import (
 	"slices"
 	"strings"
 
-	quickgo "github.com/Nigel2392/quickgo/v2"
+	"github.com/Nigel2392/quickgo/v2"
 	"github.com/Nigel2392/quickgo/v2/config"
 	"github.com/Nigel2392/quickgo/v2/logger"
 )
