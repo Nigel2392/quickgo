@@ -123,16 +123,49 @@ func main() {
 	flagSet.BoolVar(&flagger.Serve, "serve", false, "Serve the project over HTTP.")
 	flagSet.BoolVar(&flagger.Verbose, "v", false, "Enable verbose logging.")
 
-	quickgo.PrintLogo()
+	flagSet.Usage = func() {
+		fmt.Println(quickgo.Craft(quickgo.CMD_Cyan, "QuickGo: A simple project generator and server."))
+		fmt.Println("Usage: quickgo [flags] [?command] [?args]")
+		fmt.Println("Available application flags:")
+		flagSet.VisitAll(func(f *flag.Flag) {
 
-	if len(os.Args) < 2 {
-		flagSet.Usage()
-		os.Exit(1)
-	}
+			var name = f.Name
+			if f.DefValue != "" {
+				name = fmt.Sprintf("%s=%s", name, f.DefValue)
+			}
 
-	err = flagSet.Parse(os.Args[1:])
-	if err != nil {
-		panic(err)
+			fmt.Printf("  -%s\n", quickgo.Craft(quickgo.CMD_Cyan, name))
+			fmt.Printf("    %s: %s\n", f.Name, f.Usage)
+		})
+
+		// Try to load the project configuration.
+		// It might contain some more commands! :D
+		if qg.ProjectConfig == nil {
+			err = qg.LoadProjectConfig(".")
+		}
+		if err != nil && errors.Is(err, config.ErrProjectMissing) {
+			// No project found in the current directory.
+			fmt.Println(quickgo.Craft(quickgo.CMD_Red, "No project found in the current directory."))
+			fmt.Println("Run 'quickgo -example' to create an example project configuration.")
+		} else if err == nil {
+
+			// Project found, commands is map -> sort to slice.
+			var commands = make([]string, 0, len(qg.ProjectConfig.Commands))
+			for k := range qg.ProjectConfig.Commands {
+				commands = append(commands, k)
+			}
+			slices.Sort(commands)
+
+			fmt.Println(
+				quickgo.Craft(
+					quickgo.CMD_Blue,
+					"Available project commands:",
+				),
+			)
+			for _, c := range commands {
+				fmt.Printf("  - %s\n", quickgo.Craft(quickgo.CMD_Cyan, c))
+			}
+		}
 	}
 
 	logger.Setup(&logger.Logger{
@@ -147,6 +180,18 @@ func main() {
 
 	// Initially load the application.
 	qg, err = quickgo.LoadApp()
+	if err != nil {
+		panic(err)
+	}
+
+	quickgo.PrintLogo()
+
+	if len(os.Args) < 2 {
+		flagSet.Usage()
+		os.Exit(1)
+	}
+
+	err = flagSet.Parse(os.Args[1:])
 	if err != nil {
 		panic(err)
 	}
@@ -281,7 +326,6 @@ func main() {
 			panic(fmt.Errorf("failed to start server: %w", err))
 		}
 	default:
-
 		// Parse commands for the project itself.
 		var args = flagSet.Args()
 		if len(args) == 0 {
@@ -295,29 +339,21 @@ func main() {
 			ctx     = parseCommandlineContext(args[1:], true)
 			err     = qg.LoadProjectConfig(".")
 		)
-		if err != nil {
+		if err != nil && !errors.Is(err, config.ErrProjectMissing) {
 			panic(fmt.Errorf("failed to read project config: %w", err))
+		} else if errors.Is(err, config.ErrProjectMissing) {
+			fmt.Println(quickgo.Craft(quickgo.CMD_Red, "Cannot execute project commands outside of a project."))
+			os.Exit(1)
 		}
 
 		cmd, err = qg.ProjectConfig.Command(command, nil)
 		if err != nil && errors.Is(err, config.ErrCommandMissing) {
-			fmt.Printf("Command '%s' not found\n", command)
 
-			if len(qg.ProjectConfig.Commands) == 0 {
-				fmt.Println("No commands available for this project.")
-				os.Exit(1)
-			}
-
-			var commands = make([]string, 0, len(qg.ProjectConfig.Commands))
-			for k := range qg.ProjectConfig.Commands {
-				commands = append(commands, k)
-			}
-			slices.Sort(commands)
-			fmt.Println("Available project commands (run quickgo -h to see application commands):")
-			for _, c := range commands {
-				fmt.Printf("  - %s\n", c)
-			}
+			// Just a bunch of terminal printing.
+			flagSet.Usage()
+			fmt.Printf(quickgo.Craft(quickgo.CMD_Red, "Command '%s' not found\n"), command)
 			os.Exit(1)
+
 		} else if err != nil {
 			panic(fmt.Errorf("failed to get command: %w", err))
 		}
