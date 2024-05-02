@@ -17,8 +17,8 @@ type Step struct {
 	Args    []string `yaml:"args"`    // The arguments to pass to the command.
 }
 
-// Execute runs the command.
-func (s Step) Execute(env map[string]any) error {
+// ParseArgs parses the arguments.
+func (s *Step) ParseArgs(env map[string]any) ([]string, []string) {
 	var (
 		envSlice = make([]string, 0, len(env))
 		args     = slices.Clone(s.Args)
@@ -33,6 +33,12 @@ func (s Step) Execute(env map[string]any) error {
 		args[i] = ExpandArg(arg, env)
 	}
 
+	return args, envSlice
+}
+
+// Execute runs the command.
+func (s Step) Execute(env map[string]any) error {
+	var args, envSlice = s.ParseArgs(env)
 	var cmd = exec.Command(s.Command, args...)
 	cmd.Env = envSlice
 	//cmd.SysProcAttr = &syscall.SysProcAttr{
