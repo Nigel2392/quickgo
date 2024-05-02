@@ -60,6 +60,10 @@ type Logger struct {
 	Output io.Writer
 }
 
+func (l *Logger) SetLevel(level LogLevel) {
+	l.Level = level
+}
+
 func (l *Logger) Write(p []byte) (n int, err error) {
 	l.writePrefix(InfoLevel, l.Output)
 	n, err = l.Output.Write(p)

@@ -2,11 +2,12 @@ package quickfs
 
 import (
 	"errors"
-	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 )
 
 var (
@@ -34,6 +35,24 @@ type FSDirectory struct {
 	IsExcluded func(FileLike) bool
 }
 
+// String returns the directory in string format.
+func (d *FSDirectory) String() string {
+	var b strings.Builder
+	b.WriteString(d.Name)
+	b.WriteString(":\n")
+	for _, dir := range d.Directories {
+		b.WriteString("   ")
+		b.WriteString(dir.GetName())
+		b.WriteString("\n")
+	}
+	for _, f := range d.Files {
+		b.WriteString("  ")
+		b.WriteString(f.GetName())
+		b.WriteString("\n")
+	}
+	return b.String()
+}
+
 // NewFSDirectory creates a new FSDirectory.
 func NewDirectory(name, path string) Directory {
 	return NewFSDirectory(name, path, nil)
@@ -55,8 +74,7 @@ func (f *FSDirectory) IsDir() bool {
 
 func (d *FSDirectory) Load() error {
 
-	if d.IsExcluded != nil && d.IsExcluded(d) {
-		fmt.Println("excluded", d.Path)
+	if d.root != nil && d.root.IsExcluded != nil && d.root.IsExcluded(d) {
 		return ErrFileLikeExcluded
 	}
 
@@ -69,7 +87,7 @@ func (d *FSDirectory) Load() error {
 	if root == nil {
 		root = d
 	}
-
+loop:
 	for _, dir := range dirs {
 		var (
 			n   = dir.Name()
@@ -89,7 +107,7 @@ func (d *FSDirectory) Load() error {
 			)
 		}
 		if err != nil && errors.Is(err, ErrFileLikeExcluded) {
-			continue
+			continue loop
 		} else if err != nil {
 			return err
 		}
@@ -113,43 +131,68 @@ func (d *FSDirectory) GetPath() string {
 }
 
 func (d *FSDirectory) Find(path []string) (FileLike, error) {
+	if path == nil {
+		return nil, &fs.PathError{
+			Op:   "find",
+			Path: d.Path,
+			Err:  os.ErrInvalid,
+		}
+	}
+
 	if len(path) == 0 {
 		return d, nil
 	}
 
-	var (
-		dir = d
-		ok  bool
-	)
+	var name = path[0]
+	var dir, ok = d.Directories[name]
+	if ok {
+		return dir.Find(path[1:])
+	}
 
-	for _, name := range path {
-		if dir, ok = dir.Directories[name]; ok {
-			return dir.Find(path[1:])
-		} else if f, ok := dir.Files[name]; ok && len(path) == 1 {
-			return f, nil
-		}
+	f, ok := d.Files[name]
+	if ok && len(path) == 1 {
+		return f, nil
 	}
 
 	return nil, os.ErrNotExist
 }
 
 func (d *FSDirectory) AddDirectory(dirPath string) {
-	var parts = filepath.SplitList(dirPath)
-	var dir = d
+	dirPath = filepath.ToSlash(dirPath)
+	dirPath = filepath.FromSlash(dirPath)
+	dirPath = filepath.Clean(dirPath)
+
+	var (
+		ok    bool
+		_d    *FSDirectory
+		parts = strings.Split(dirPath, string(os.PathSeparator))
+		dir   = d
+	)
+
 	for _, part := range parts {
-		if _, ok := dir.Directories[part]; !ok {
-			dir.Directories[part] = NewFSDirectory(
+		if _d, ok = dir.Directories[part]; !ok {
+			_d = NewFSDirectory(
 				part, filepath.Join(dir.Path, part), d.root,
 			)
+			dir.Directories[part] = _d
 		}
+
+		dir = _d
 	}
+
 }
 
 func (d *FSDirectory) AddFile(filePath string, reader io.ReadCloser) {
-	var parts = filepath.SplitList(filePath)
-	var dir = d
-	for _, part := range parts[:len(parts)-1] {
-		if _, ok := dir.Directories[part]; !ok {
+	filePath = filepath.ToSlash(filePath)
+	filePath = filepath.FromSlash(filePath)
+	filePath = filepath.Clean(filePath)
+	var (
+		parts = strings.Split(filePath, string(os.PathSeparator))
+		dir   = d
+	)
+	for i := 0; i < len(parts)-1; i++ {
+		var part = parts[i]
+		if _, ok := dir.Directories[parts[i]]; !ok {
 			dir.Directories[part] = NewFSDirectory(
 				part, filepath.Join(dir.Path, part), d.root,
 			)

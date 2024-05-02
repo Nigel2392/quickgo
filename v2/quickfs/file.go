@@ -16,8 +16,6 @@ type FSFile struct {
 	IsText bool
 
 	Reader io.ReadCloser
-
-	readFrom bool
 }
 
 // NewFSFile creates a new FSFile.
@@ -61,10 +59,6 @@ func (f *FSFile) GetPath() string {
 }
 
 func (f *FSFile) Read(p []byte) (n int, err error) {
-	if f.readFrom {
-		return 0, io.EOF
-	}
-	f.readFrom = true
 	return f.Reader.Read(p)
 }
 

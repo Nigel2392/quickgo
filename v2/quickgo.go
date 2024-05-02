@@ -19,16 +19,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	QUICKGO_DIR         = ".quickgo"     // The directory for QuickGo files, resides in the executable directory.
-	QUICKGO_CONFIG_NAME = "quickgo.yaml" // Config file for QuickGo, resides in the executable directory.
-	PROJECT_CONFIG_NAME = "quickgo.yaml" // Config file for the project, resides in the project (working) directory.
-	PROJECT_ZIP_NAME    = "project.zip"  // The name of the project zip file.
-
-	// Error messages.
-	ErrProjectMissing = ErrorStr("project config not found")
-)
-
 var cliApplication *App
 
 type (
@@ -38,13 +28,7 @@ type (
 		AppFS         fs.FS           `yaml:"-"`             // The file system for the app, resides in the executable directory.
 		ProjectFS     fs.FS           `yaml:"-"`             // The file system for the project, resides in the project (working) directory.
 	}
-
-	ErrorStr string
 )
-
-func (e ErrorStr) Error() string {
-	return string(e)
-}
 
 func LoadApp() (*App, error) {
 	if cliApplication != nil {
@@ -57,8 +41,8 @@ func LoadApp() (*App, error) {
 	}
 
 	// Check for the application config directory.
-	var quickGoDir = filepath.Join(executableDir, QUICKGO_DIR)
-	var projectDir = filepath.Join(executableDir, QUICKGO_DIR, "projects")
+	var quickGoDir = filepath.Join(executableDir, config.QUICKGO_DIR)
+	var projectDir = filepath.Join(executableDir, config.QUICKGO_DIR, "projects")
 	_, err = os.Stat(projectDir)
 
 	// Create the application config directory if it does not exist.
@@ -85,12 +69,12 @@ func LoadApp() (*App, error) {
 
 	// Load the QuickGo configuration.
 	var configPath = filepath.Join(
-		executableDir, QUICKGO_DIR, QUICKGO_CONFIG_NAME,
+		executableDir, config.QUICKGO_DIR, config.QUICKGO_CONFIG_NAME,
 	)
 
 	cfg, err := config.LoadYamlFS[config.QuickGo](
 		app.AppFS,
-		QUICKGO_CONFIG_NAME,
+		config.QUICKGO_CONFIG_NAME,
 	)
 	if err != nil {
 		// Create a new config file if it does not exist.
@@ -117,17 +101,25 @@ func LoadApp() (*App, error) {
 }
 
 // Load the project configuration from the current working directory.
-func (a *App) LoadProjectConfig() error {
+func (a *App) LoadProjectConfig(directory string) (err error) {
 
-	logger.Debugf("Loading project config: %s", PROJECT_CONFIG_NAME)
+	logger.Debugf("Loading project config: %s", config.PROJECT_CONFIG_NAME)
 
-	var proj, err = config.LoadYamlFS[config.Project](
-		a.ProjectFS,
-		PROJECT_CONFIG_NAME,
+	if directory == "" {
+		if directory, err = os.Getwd(); err != nil {
+			return err
+		}
+	}
+
+	directory = filepath.ToSlash(directory)
+	directory = filepath.FromSlash(directory)
+
+	proj, err := config.LoadYaml[config.Project](
+		filepath.Join(directory, config.PROJECT_CONFIG_NAME),
 	)
+
 	if err != nil && os.IsNotExist(err) {
-		logger.Error("Project config not found")
-		return ErrProjectMissing
+		return config.ErrProjectMissing
 	} else if err != nil {
 		return err
 	}
@@ -141,10 +133,10 @@ func (a *App) LoadProjectConfig() error {
 // Write an example configuration for the user.
 func (a *App) WriteExampleProjectConfig() error {
 	var example = config.ExampleProjectConfig()
-	return config.WriteYaml(example, PROJECT_CONFIG_NAME)
+	return config.WriteYaml(example, config.PROJECT_CONFIG_NAME)
 }
 
-func (a *App) WriteProject(proj *config.Project, directory string) error {
+func (a *App) WriteProject(proj *config.Project, directory string, raw bool) error {
 
 	var (
 		cwd string
@@ -181,7 +173,7 @@ func (a *App) WriteProject(proj *config.Project, directory string) error {
 	context["projectPath"] = projectDir
 
 	// Run commands before copying the project files.
-	if err = a.ProjectConfig.BeforeCopy.Execute(context); err != nil {
+	if err = proj.BeforeCopy.Execute(context); err != nil {
 		return errors.Wrap(err, "failed to execute before copy steps")
 	}
 
@@ -200,19 +192,13 @@ func (a *App) WriteProject(proj *config.Project, directory string) error {
 		var b = new(bytes.Buffer)
 
 		err = a.executeTemplate(
-			"file", b, p,
+			proj, b, p,
 		)
 		if err != nil {
 			return true, errors.Wrapf(err, "failed to execute template for filename %s", p)
 		}
 
-		var path = path.Join(projectDir, b.String())
-
-		logger.Debugf("Copying %s to %s (isDir=%v)",
-			pathForLog(fl.GetPath()),
-			pathForLog(path),
-			fl.IsDir(),
-		)
+		var path = filepath.Join(projectDir, b.String())
 
 		switch f := fl.(type) {
 		case *quickfs.FSFile:
@@ -229,7 +215,7 @@ func (a *App) WriteProject(proj *config.Project, directory string) error {
 			}
 			defer osFile.Close()
 
-			if err = a.CopyFileContent(osFile, f); err != nil {
+			if err = a.CopyFileContent(proj, osFile, f, raw); err != nil {
 				return true, errors.Wrapf(err, "failed to copy file content to %s", path)
 			}
 
@@ -240,9 +226,11 @@ func (a *App) WriteProject(proj *config.Project, directory string) error {
 			}
 		}
 
+		rel, err := filepath.Rel(projectDir, path)
+
 		logger.Debugf("Copied %s to %s",
-			pathForLog(fl.GetPath()),
-			pathForLog(path),
+			fl.GetPath(),
+			rel,
 		)
 
 		return false, nil
@@ -254,7 +242,7 @@ func (a *App) WriteProject(proj *config.Project, directory string) error {
 	}
 
 	// Run commands after copying the project files.
-	err = a.ProjectConfig.AfterCopy.Execute(context)
+	err = proj.AfterCopy.Execute(context)
 	if err != nil {
 		return errors.Wrap(err, "failed to execute after copy steps")
 	}
@@ -272,7 +260,7 @@ func (a *App) WriteProjectConfig(proj *config.Project) error {
 		dirPath = getProjectFilePath(proj.Name, true)
 	)
 
-	var path = filepath.Join(dirPath, PROJECT_CONFIG_NAME)
+	var path = filepath.Join(dirPath, config.PROJECT_CONFIG_NAME)
 	if err = os.MkdirAll(dirPath, os.ModePerm); err != nil {
 		return err
 	}
@@ -284,7 +272,7 @@ func (a *App) WriteProjectConfig(proj *config.Project) error {
 		return err
 	}
 
-	var zipPath = filepath.Join(dirPath, PROJECT_ZIP_NAME)
+	var zipPath = filepath.Join(dirPath, config.PROJECT_ZIP_NAME)
 
 	if file, err = os.Create(zipPath); err != nil {
 		return err
@@ -296,10 +284,8 @@ func (a *App) WriteProjectConfig(proj *config.Project) error {
 
 	logger.Infof("Writing project files to %s", zipPath)
 
-	_, err = a.ProjectConfig.Root.ForEach(func(fl quickfs.FileLike) (cancel bool, err error) {
+	_, err = proj.Root.ForEach(func(fl quickfs.FileLike) (cancel bool, err error) {
 		var p = fl.GetPath()
-
-		logger.Debugf("Writing %s to %s (isDir=%v)", fl.GetPath(), p, fl.IsDir())
 
 		switch f := fl.(type) {
 		case *quickfs.FSFile:
@@ -338,12 +324,12 @@ func (a *App) WriteProjectConfig(proj *config.Project) error {
 
 func (a *App) ReadProjectConfig(name string) (proj *config.Project, closeFiles func(), err error) {
 	var (
-		file       *os.File
-		dirPath    = getProjectFilePath(name, false)
+		file *os.File
+		// dirPath    = getProjectFilePath(name, false)
 		absDirPath = getProjectFilePath(name, true)
 	)
 	proj, err = config.LoadYaml[config.Project](
-		path.Join(absDirPath, PROJECT_CONFIG_NAME),
+		path.Join(absDirPath, config.PROJECT_CONFIG_NAME),
 	)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load YAML for project config %s", name)
@@ -351,13 +337,13 @@ func (a *App) ReadProjectConfig(name string) (proj *config.Project, closeFiles f
 
 	proj.Root = quickfs.NewFSDirectory(
 		proj.Name,
-		dirPath,
+		".",
 		nil,
 	)
 	proj.Root.IsExcluded = proj.IsExcluded
 
 	file, err = os.Open(
-		path.Join(absDirPath, PROJECT_ZIP_NAME),
+		path.Join(absDirPath, config.PROJECT_ZIP_NAME),
 	)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to open zip file for project %s", name)
@@ -385,6 +371,10 @@ func (a *App) ReadProjectConfig(name string) (proj *config.Project, closeFiles f
 			fInfo = f.FileInfo()
 		)
 
+		if f.Name == "." || f.Name == "./" {
+			continue
+		}
+
 		if fInfo.IsDir() {
 			proj.Root.AddDirectory(f.Name)
 
@@ -404,14 +394,20 @@ func (a *App) ReadProjectConfig(name string) (proj *config.Project, closeFiles f
 	return proj, closeFiles, nil
 }
 
-func (a *App) CopyFileContent(file *os.File, f *quickfs.FSFile) error {
+func (a *App) CopyFileContent(proj *config.Project, file *os.File, f *quickfs.FSFile, raw bool) error {
+
+	if raw {
+		_, err := io.Copy(file, f)
+		return err
+	}
+
 	var b = new(bytes.Buffer)
 	if _, err := io.Copy(b, f); err != nil {
 		return err
 	}
 
 	f.IsText = quickfs.IsText(b.Bytes()) && !strings.HasSuffix(
-		f.Name, PROJECT_CONFIG_NAME,
+		f.Name, config.PROJECT_CONFIG_NAME,
 	)
 
 	if !f.IsText {
@@ -424,17 +420,19 @@ func (a *App) CopyFileContent(file *os.File, f *quickfs.FSFile) error {
 		return err
 	}
 
+	fmt.Println(len(content), f.Name)
+
 	return a.executeTemplate(
-		"file", file, string(content),
+		proj, file, string(content),
 	)
 }
 
-func (a *App) executeTemplate(name string, w io.Writer, content string) error {
+func (a *App) executeTemplate(proj *config.Project, w io.Writer, content string) error {
 
-	var tpl = template.New(name)
+	var tpl = template.New("file")
 	tpl.Delims(
-		a.ProjectConfig.DelimLeft,
-		a.ProjectConfig.DelimRight,
+		proj.DelimLeft,
+		proj.DelimRight,
 	)
 
 	if _, err := tpl.Parse(content); err != nil {
@@ -446,31 +444,20 @@ func (a *App) executeTemplate(name string, w io.Writer, content string) error {
 	}
 
 	return errors.Wrapf(
-		tpl.Execute(w, a.ProjectConfig),
+		tpl.Execute(w, proj),
 		"failed to execute template %s",
 		content,
 	)
 }
 
 func (a *App) WriteFile(data []byte, path string) error {
-	path = filepath.Join(executableDir, QUICKGO_DIR, path)
+	path = filepath.Join(executableDir, config.QUICKGO_DIR, path)
 	return os.WriteFile(path, data, os.ModePerm)
 }
 
 func (a *App) ReadFile(path string) ([]byte, error) {
-	path = filepath.Join(executableDir, QUICKGO_DIR, path)
+	path = filepath.Join(executableDir, config.QUICKGO_DIR, path)
 	return os.ReadFile(path)
-}
-
-func pathForLog(p string) string {
-	var parts = filepath.SplitList(p)
-	if len(parts) < 3 {
-		return p
-	}
-	if len(parts) == 3 {
-		return fmt.Sprintf("%s/.../%s", parts[0], parts[2])
-	}
-	return fmt.Sprintf("%s/.../%s", parts[0], parts[len(parts)-1])
 }
 
 func getProjectFilePath(name string, absolute bool) string {
@@ -478,7 +465,7 @@ func getProjectFilePath(name string, absolute bool) string {
 	if absolute {
 		p = path.Join(
 			executableDir,
-			QUICKGO_DIR,
+			config.QUICKGO_DIR,
 			"projects",
 			name,
 		)

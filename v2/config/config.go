@@ -4,13 +4,26 @@ import (
 	"encoding/gob"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/Nigel2392/quickgo/v2/command"
 	"github.com/Nigel2392/quickgo/v2/logger"
 	"github.com/Nigel2392/quickgo/v2/quickfs"
 )
 
+const (
+	QUICKGO_DIR         = ".quickgo"     // The directory for QuickGo files, resides in the executable directory.
+	QUICKGO_CONFIG_NAME = "quickgo.yaml" // Config file for QuickGo, resides in the executable directory.
+	PROJECT_CONFIG_NAME = "quickgo.yaml" // Config file for the project, resides in the project (working) directory.
+	PROJECT_ZIP_NAME    = "project.zip"  // The name of the project zip file.
+
+	// Error messages.
+	ErrProjectMissing = ErrorStr("project config not found")
+)
+
 type (
+	ErrorStr string
+
 	// Config represents the configuration for QuickGo.
 	QuickGo struct {
 		Host    string `yaml:"host"`        // The host to run the server on.
@@ -38,9 +51,14 @@ type (
 		// A list of files to exclude from the project in glob format.
 		Exclude []string `yaml:"exclude" json:"exclude"` // (NYI)
 
-		Root *quickfs.FSDirectory `yaml:"-"` // The root directory.
+		// The root directory.
+		Root *quickfs.FSDirectory `yaml:"-"`
 	}
 )
+
+func (e ErrorStr) Error() string {
+	return string(e)
+}
 
 func init() {
 	gob.Register(&QuickGo{})
@@ -106,11 +124,21 @@ func (p *Project) Load(projectDirectory string) error {
 }
 
 func (p *Project) IsExcluded(fl quickfs.FileLike) bool {
+	var path = fl.GetPath()
+
+	if strings.HasSuffix(path, PROJECT_CONFIG_NAME) {
+		return true
+	}
+
 	for _, pattern := range p.Exclude {
-		if m, err := filepath.Match(pattern, fl.GetPath()); err != nil {
-			return false
-		} else if m {
-			logger.Debugf("Excluding %s (%s)", fl.GetPath(), pattern)
+		var match, err = filepath.Match(pattern, path)
+		if err != nil {
+			logger.Errorf("Error matching pattern %s: %v", pattern, err)
+			continue
+		}
+
+		if match {
+			logger.Debugf("Excluding %s (%s)", path, pattern)
 			return true
 		}
 	}

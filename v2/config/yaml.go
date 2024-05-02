@@ -4,7 +4,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -49,8 +48,8 @@ func WriteYaml(data interface{}, path string) error {
 		return err
 	}
 
-	path = strings.ReplaceAll(path, "\\", "/")
-	path = strings.ReplaceAll(path, "/", "\\")
+	path = filepath.ToSlash(path)
+	path = filepath.FromSlash(path)
 	path = filepath.Clean(path)
 
 	var (

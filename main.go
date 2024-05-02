@@ -1,63 +1,168 @@
 package main
 
 import (
-	"errors"
+	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Nigel2392/quickgo/v2"
+	"github.com/Nigel2392/quickgo/v2/config"
 	"github.com/Nigel2392/quickgo/v2/logger"
 )
 
+type Flagger struct {
+	Project   config.Project
+	Config    config.QuickGo
+	Exclude   arrayFlags
+	TargetDir string
+	Verbose   bool
+	Import    bool
+	Use       bool
+}
+
+func (f *Flagger) Copy(proj *config.Project, conf *config.QuickGo) {
+	if f.Project.Name != "" {
+		proj.Name = f.Project.Name
+	}
+	if f.Project.DelimLeft != "" {
+		proj.DelimLeft = f.Project.DelimLeft
+	}
+	if f.Project.DelimRight != "" {
+		proj.DelimRight = f.Project.DelimRight
+	}
+	if f.Project.Exclude != nil {
+		proj.Exclude = f.Project.Exclude
+	}
+	if f.Config.Host != "" {
+		conf.Host = f.Config.Host
+	}
+	if f.Config.Port != "" {
+		conf.Port = f.Config.Port
+	}
+	if f.Config.TLSKey != "" {
+		conf.TLSKey = f.Config.TLSKey
+	}
+	if f.Config.TLSCert != "" {
+		conf.TLSCert = f.Config.TLSCert
+	}
+}
+
+type arrayFlags []string
+
+func (a *arrayFlags) String() string {
+	var b strings.Builder
+	for i, v := range *a {
+		b.WriteString(v)
+		if i < len(*a)-1 {
+			b.WriteString(", ")
+		}
+	}
+	return b.String()
+}
+
+func (i *arrayFlags) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
 func main() {
 
+	var (
+		err     error
+		flagger Flagger
+		flagSet = flag.NewFlagSet("quickgo", flag.ExitOnError)
+		qg      *quickgo.App
+	)
+
+	flagSet.StringVar(&flagger.Project.Name, "n", "", "The name of the project.")
+	flagSet.StringVar(&flagger.Project.DelimLeft, "delim-left", "", "The left delimiter for the project templates.")
+	flagSet.StringVar(&flagger.Project.DelimRight, "delim-right", "", "The right delimiter for the project templates.")
+
+	flagSet.StringVar(&flagger.Config.Host, "host", "localhost", "The host to run the server on.")
+	flagSet.StringVar(&flagger.Config.Port, "port", "8080", "The port to run the server on.")
+	flagSet.StringVar(&flagger.Config.TLSKey, "tls-key", "", "The path to the TLS key.")
+	flagSet.StringVar(&flagger.Config.TLSCert, "tls-cert", "", "The path to the TLS certificate.")
+
+	flagSet.Var(&flagger.Exclude, "e", "A list of files to exclude from the project in glob format.")
+	flagSet.StringVar(&flagger.TargetDir, "d", "", "The target directory to write the project to.")
+	flagSet.BoolVar(&flagger.Import, "get", false, "Import the project from the current directory.")
+	flagSet.BoolVar(&flagger.Verbose, "v", false, "Enable verbose logging.")
+	flagSet.BoolVar(&flagger.Use, "use", false, "Use the specified project configuration.")
+
+	quickgo.PrintLogo()
+
+	if len(os.Args) < 2 {
+		flagSet.Usage()
+		os.Exit(1)
+	}
+
+	err = flagSet.Parse(os.Args[1:])
+	if err != nil {
+		panic(err)
+	}
+
 	logger.Setup(&logger.Logger{
-		Level:  logger.DebugLevel,
+		Level:  logger.InfoLevel,
 		Output: os.Stdout,
 		Prefix: "quickgo",
 	})
 
-	var qg, err = quickgo.LoadApp()
+	if flagger.Verbose {
+		logger.SetLevel(logger.DebugLevel)
+	}
+
+	// Initially load the application.
+	qg, err = quickgo.LoadApp()
 	if err != nil {
 		panic(err)
 	}
 
-	err = qg.LoadProjectConfig()
-	if err != nil {
-		panic(err)
-	}
+	switch {
+	case flagger.Import:
 
-	err = qg.ProjectConfig.Load(".")
-
-	if errors.Is(err, quickgo.ErrProjectMissing) {
-		err = qg.WriteExampleProjectConfig()
+		err = qg.LoadProjectConfig(".")
 		if err != nil {
-			panic(fmt.Errorf("failed to write example project config: %w", err))
+			panic(err)
 		}
+
+		err = qg.ProjectConfig.Load(".")
+		if err != nil {
+			panic(err)
+		}
+
+		flagger.Copy(
+			qg.ProjectConfig,
+			qg.Config,
+		)
+
+		err = qg.WriteProjectConfig(qg.ProjectConfig)
+		if err != nil {
+			panic(fmt.Errorf("failed to write project config: %w", err))
+		}
+
 		return
-	} else if err != nil {
-		panic(err)
-	}
 
-	fmt.Println(qg)
+	case flagger.Use:
 
-	err = qg.WriteProjectConfig(qg.ProjectConfig)
-	if err != nil {
-		panic(fmt.Errorf("failed to write project config: %w", err))
-	}
+		if flagger.Project.Name == "" {
+			fmt.Println("No project name specified.")
+			os.Exit(1)
+		}
 
-	fmt.Println("Project config written.")
+		var proj, close, err = qg.ReadProjectConfig(flagger.Project.Name)
+		if err != nil {
+			panic(fmt.Errorf("failed to read project config: %w", err))
+		}
 
-	proj, close, err := qg.ReadProjectConfig(qg.ProjectConfig.Name)
-	if err != nil {
-		panic(fmt.Errorf("failed to read project config: %w", err))
-	}
+		defer close()
 
-	defer close()
+		fmt.Printf("Using project: %s %+v\n", proj.Name, proj)
 
-	err = qg.WriteProject(proj, "test")
-	if err != nil {
-		panic(fmt.Errorf("failed to write project: %w", err))
+		err = qg.WriteProject(proj, flagger.TargetDir, false)
+		if err != nil {
+			panic(fmt.Errorf("failed to write project: %w", err))
+		}
 	}
 
 }

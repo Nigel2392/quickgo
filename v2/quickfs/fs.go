@@ -4,7 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/gob"
+	"fmt"
 	"io"
+	"path/filepath"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -41,6 +44,22 @@ type (
 func init() {
 	gob.Register(&FSDirectory{})
 	gob.Register(&FSFile{})
+}
+
+func printDir(w io.Writer, d *FSDirectory, indent int) {
+	for _, dir := range d.Directories {
+		fmt.Fprintf(w, "%s%s%s\n", strings.Repeat(" ", indent), dir.GetName(), string(filepath.Separator))
+		printDir(w, dir, indent+2)
+	}
+
+	for _, f := range d.Files {
+		fmt.Fprintf(w, "%s%s\n", strings.Repeat(" ", indent), f.GetName())
+	}
+}
+
+func PrintRoot(w io.Writer, root *FSDirectory) {
+	fmt.Fprintf(w, "%s%s\n", root.GetName(), string(filepath.Separator))
+	printDir(w, root, 2)
 }
 
 func IsText(data []byte) bool {

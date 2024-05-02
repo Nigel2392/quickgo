@@ -15,6 +15,10 @@ func Setup(l *Logger) {
 	_globalLogger = l
 }
 
+func SetLevel(level LogLevel) {
+	_globalLogger.Level = level
+}
+
 func Debug(args ...interface{}) {
 	_globalLogger.Debug(args...)
 }
