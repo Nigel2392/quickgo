@@ -1,4 +1,4 @@
-module github.com/Nigel2392/quickgo/v2
+module github.com/Nigel2392/quickgo
 
 go 1.21
 
