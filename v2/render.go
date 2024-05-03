@@ -24,11 +24,12 @@ func Craft(color, s any) string {
 }
 
 func PrintLogo() {
+	// Quick GO logo.
 	str := Craft(CMD_Cyan, " $$$$$$\\            $$\\           $$\\         "+Craft(CMD_Cyan, "     $$$$$$\\\n")) +
-		Craft(CMD_Cyan, "$$  __$$\\           \\__|          $$ |         "+Craft(CMD_Cyan, "   $$  __$$\\ \n")) +
-		Craft(CMD_Blue, "$$ /  $$ |$$\\   $$\\ $$\\  $$$$$$$\\ $$ |  $$\\ "+Craft(CMD_Cyan, "      $$ /  \\__| $$$$$$\\   ####\n")) +
-		Craft(CMD_Blue, "$$ |  $$ |$$ |  $$ |$$ |$$  _____|$$ | $$  |     "+Craft(CMD_Cyan, " $$ |$$$$\\ $$  __$$\\\n")) +
-		Craft(CMD_Blue, "$$ |  $$ |$$ |  $$ |$$ |$$ /      $$$$$$  /      "+Craft(CMD_Cyan, " $$ |\\_$$ |$$ /  $$ |   ######\n")) +
+		Craft(CMD_Cyan, "$$  \033[31m__\033[36m$$\\           \033[31m\\__|\033[36m          $$ |         "+Craft(CMD_Cyan, "   $$  __$$\\ \n")) +
+		Craft(CMD_Blue, "$$ \033[31m/\033[36m  $$ |$$\\   $$\\ $$\\  $$$$$$$\\ $$ |  $$\\ "+Craft(CMD_Cyan, "      $$ /  \\__| $$$$$$\\   ####\n")) +
+		Craft(CMD_Blue, "$$ \033[31m|\033[34m  $$ |$$ |  $$ |$$ |$$  \033[31m_____|\033[34m$$ | $$  \033[31m|\033[34m     "+Craft(CMD_Cyan, " $$ |$$$$\\ $$  __$$\\\n")) +
+		Craft(CMD_Blue, "$$ \033[31m|\033[34m  $$ |$$ |  $$ |$$ |$$ \033[31m/\033[34m      $$$$$$  \033[31m/\033[34m      "+Craft(CMD_Cyan, " $$ |\\_$$ |$$ /  $$ |   \033[1m######\n")) + // Make the middle line bold.
 		Craft(CMD_Purple, "$$ $$\\$$ |$$ |  $$ |$$ |$$ |      $$  _$$<      "+Craft(CMD_Cyan, "  $$ |  $$ |$$ |  $$ |\n")) +
 		Craft(CMD_Purple, "\\$$$$$$ / \\$$$$$$  |$$ |\\$$$$$$$\\ $$ | \\$$\\   "+Craft(CMD_Cyan, "    \\$$$$$$  |\\$$$$$$  | #####\n")) +
 		Craft(CMD_Red, " \\___"+CMD_Reset+Craft(CMD_Purple, "$$$")+Craft(CMD_Red, "\\  \\______/ \\__| \\_______|\\__|  \\__| ")+Craft(CMD_Cyan, "      \\______/  \\______/\n")) +
