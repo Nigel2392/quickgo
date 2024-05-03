@@ -169,22 +169,23 @@ func main() {
 	}
 
 	logger.Setup(&logger.Logger{
-		Level:  logger.InfoLevel,
-		Output: os.Stdout,
-		Prefix: "quickgo",
+		Level:      logger.InfoLevel,
+		Output:     os.Stdout,
+		Prefix:     "quickgo",
+		WrapPrefix: quickgo.ColoredLogWrapper,
 	})
 
 	if flagger.Verbose {
 		logger.SetLevel(logger.DebugLevel)
 	}
 
+	quickgo.PrintLogo()
+
 	// Initially load the application.
 	qg, err = quickgo.LoadApp()
 	if err != nil {
-		panic(err)
+		logger.Fatal(1, err)
 	}
-
-	quickgo.PrintLogo()
 
 	if len(os.Args) < 2 {
 		flagSet.Usage()
@@ -193,7 +194,7 @@ func main() {
 
 	err = flagSet.Parse(os.Args[1:])
 	if err != nil {
-		panic(err)
+		logger.Fatal(1, err)
 	}
 
 	switch {
@@ -201,12 +202,12 @@ func main() {
 
 		err = qg.LoadProjectConfig(".")
 		if err != nil {
-			panic(err)
+			logger.Fatal(1, err)
 		}
 
 		err = qg.ProjectConfig.Load(".")
 		if err != nil {
-			panic(err)
+			logger.Fatal(1, err)
 		}
 
 		flagger.CopyProject(
@@ -220,7 +221,7 @@ func main() {
 
 		err = qg.WriteProjectConfig(qg.ProjectConfig)
 		if err != nil {
-			panic(fmt.Errorf("failed to write project config: %w", err))
+			logger.Fatal(1, fmt.Errorf("failed to write project config: %w", err))
 		}
 	case flagger.Use != "":
 
@@ -230,7 +231,7 @@ func main() {
 			proj, close, err = qg.ReadProjectConfig(flagger.Use)
 		)
 		if err != nil {
-			panic(fmt.Errorf("failed to read project config: %w", err))
+			logger.Fatal(1, fmt.Errorf("failed to read project config: %w", err))
 		}
 
 		// Copy over the CLI context to the project context.
@@ -248,7 +249,7 @@ func main() {
 
 		err = qg.WriteProject(proj, flagger.TargetDir, false)
 		if err != nil {
-			panic(fmt.Errorf("failed to write project: %w", err))
+			logger.Fatal(1, fmt.Errorf("failed to write project: %w", err))
 		}
 	case flagger.Example:
 
@@ -280,13 +281,13 @@ func main() {
 		)
 
 		if err != nil {
-			panic(fmt.Errorf("failed to write example project config: %w", err))
+			logger.Fatal(1, fmt.Errorf("failed to write example project config: %w", err))
 		}
 	case flagger.ListProjects:
 
 		var projects, err = qg.ListProjects()
 		if err != nil {
-			panic(fmt.Errorf("failed to list projects: %w", err))
+			logger.Fatal(1, fmt.Errorf("failed to list projects: %w", err))
 		}
 
 		fmt.Println(quickgo.Craft(quickgo.CMD_Red, "Projects:"))
@@ -324,7 +325,7 @@ func main() {
 		}
 
 		if err != nil {
-			panic(fmt.Errorf("failed to start server: %w", err))
+			logger.Fatal(1, fmt.Errorf("failed to start server: %w", err))
 		}
 	default:
 		// Parse commands for the project itself.
@@ -341,27 +342,21 @@ func main() {
 			err     = qg.LoadProjectConfig(".")
 		)
 		if err != nil && !errors.Is(err, config.ErrProjectMissing) {
-			panic(fmt.Errorf("failed to read project config: %w", err))
+			logger.Fatal(1, fmt.Errorf("failed to read project config: %w", err))
 		} else if errors.Is(err, config.ErrProjectMissing) {
-			fmt.Println(quickgo.Craft(quickgo.CMD_Red, "Cannot execute project commands outside of a project."))
-			os.Exit(1)
+			logger.Fatal(1, "Cannot execute project commands outside of a project.")
 		}
 
 		cmd, err = qg.ProjectConfig.Command(command, nil)
 		if err != nil && errors.Is(err, config.ErrCommandMissing) {
-
-			// Just a bunch of terminal printing.
-			flagSet.Usage()
-			fmt.Printf(quickgo.Craft(quickgo.CMD_Red, "Command '%s' not found\n"), command)
-			os.Exit(1)
-
+			logger.Fatal(1, fmt.Errorf("command '%s' not found", command))
 		} else if err != nil {
-			panic(fmt.Errorf("failed to get command: %w", err))
+			logger.Fatal(1, fmt.Errorf("failed to get command: %w", err))
 		}
 
 		err = cmd.Execute(ctx)
 		if err != nil {
-			panic(err)
+			logger.Fatal(1, fmt.Errorf("failed to execute command: %w", err))
 		}
 	}
 }

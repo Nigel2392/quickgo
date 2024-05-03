@@ -11,6 +11,14 @@ func Global() *Logger {
 	return _globalLogger
 }
 
+func Writer(level LogLevel) io.Writer {
+	return _globalLogger.Writer(level)
+}
+
+func PWriter(label string, level LogLevel) io.Writer {
+	return _globalLogger.PWriter(label, level)
+}
+
 func Setup(l *Logger) {
 	_globalLogger = l
 }
@@ -49,4 +57,12 @@ func Warnf(format string, args ...interface{}) {
 
 func Errorf(format string, args ...interface{}) {
 	_globalLogger.Errorf(format, args...)
+}
+
+func Fatal(errorCode int, args ...interface{}) {
+	_globalLogger.Fatal(errorCode, args...)
+}
+
+func Fatalf(errorCode int, format string, args ...interface{}) {
+	_globalLogger.Fatalf(errorCode, format, args...)
 }

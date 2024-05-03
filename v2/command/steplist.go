@@ -11,7 +11,7 @@ func (l *StepList) Execute(env map[string]any) error {
 		return nil
 	}
 	for _, step := range l.Steps {
-		logger.Info(step.Name)
+		logger.Infof("Executing step: '%s'", step.Name)
 		if err := step.Execute(env); err != nil {
 			return &Error{
 				Message:  "failed to execute step",

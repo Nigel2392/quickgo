@@ -260,8 +260,12 @@ func (c *ProjectCommand) Execute(env map[string]any) error {
 		}
 	}
 
-	var jsonData, _ = json.MarshalIndent(newEnv, "", "  ")
-	logger.Debugf("Running command '%s' with environment: %s", c.name, jsonData)
+	var jsonData, err = json.MarshalIndent(newEnv, "", "  ")
+	if err == nil {
+		logger.Debugf("Running command '%s' with environment: %s", c.name, jsonData)
+	} else {
+		logger.Warnf("Error marshalling environment map for logging: %v", err)
+	}
 
 	return c.Steps.Execute(newEnv)
 }

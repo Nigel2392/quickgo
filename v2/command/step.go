@@ -44,8 +44,12 @@ func (s Step) Execute(env map[string]any) error {
 	//cmd.SysProcAttr = &syscall.SysProcAttr{
 	//	HideWindow: true,
 	//}
-	cmd.Stdout = logger.Global()
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = logger.PWriter(
+		"command", logger.InfoLevel,
+	)
+	cmd.Stderr = logger.PWriter(
+		"command", logger.ErrorLevel,
+	)
 	return cmd.Run()
 }
 

@@ -1,6 +1,11 @@
 package quickgo
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/Nigel2392/quickgo/v2/logger"
+)
 
 const (
 	CMD_Blue          = "\033[34m"
@@ -8,6 +13,9 @@ const (
 	CMD_BRIGHT_Purple = "\033[35;1m"
 	CMD_Purple        = "\033[35m"
 	CMD_Red           = "\033[31m"
+	CMD_Yellow        = "\033[33m"
+	CMD_Bold          = "\033[1m"
+	CMD_Underline     = "\033[4m"
 	CMD_Reset         = "\033[0m"
 )
 
@@ -27,4 +35,30 @@ func PrintLogo() {
 		Craft(CMD_Red, "     \\___|                                         "+Craft(CMD_Cyan, "                   \n"))
 	fmt.Println(str)
 	fmt.Println(Craft(CMD_Red, "\nCreated by: "+Craft(CMD_Purple, "Nigel van Keulen")))
+}
+
+func wrapLog(colors ...string) func(l logger.LogLevel, s string) string {
+	var s strings.Builder
+	for _, color := range colors {
+		s.WriteString(color)
+	}
+	var prefix = s.String()
+	return func(l logger.LogLevel, s string) string {
+		return Craft(prefix, s)
+	}
+}
+
+func ColoredLogWrapper(l logger.LogLevel, s string) string {
+	var fn, ok = logWrapperMap[l]
+	if !ok {
+		return s
+	}
+	return fn(l, s)
+}
+
+var logWrapperMap = map[logger.LogLevel]func(l logger.LogLevel, s string) string{
+	logger.DebugLevel: wrapLog(CMD_Blue),
+	logger.InfoLevel:  wrapLog(CMD_Cyan),
+	logger.WarnLevel:  wrapLog(CMD_Yellow),
+	logger.ErrorLevel: wrapLog(CMD_Red, CMD_Bold),
 }

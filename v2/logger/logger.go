@@ -1,8 +1,10 @@
 package logger
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"os"
 )
 
 type LogLevel int8
@@ -38,10 +40,10 @@ type LogWriter struct {
 }
 
 func (lw *LogWriter) Write(p []byte) (n int, err error) {
-	if lw.Level <= lw.Logger.Level {
+	if lw.Level >= lw.Logger.Level {
 		lw.Logger.writePrefix(lw.Level, lw.Logger.Output)
 		n, err = lw.Logger.Output.Write(p)
-		lw.Logger.writeSuffix()
+		lw.Logger.writeSuffix(lw.Logger.Output)
 	}
 	return
 }
@@ -58,24 +60,44 @@ type Logger struct {
 
 	// Output is the output writer.
 	Output io.Writer
+
+	// WrapPrefix determines how the prefix should be wrapped
+	// based on the LogLevel.
+	WrapPrefix func(LogLevel, string) string
 }
 
 func (l *Logger) SetLevel(level LogLevel) {
 	l.Level = level
 }
 
-func (l *Logger) Write(p []byte) (n int, err error) {
-	l.writePrefix(InfoLevel, l.Output)
-	n, err = l.Output.Write(p)
-	l.writeSuffix()
-	return
+func (l *Logger) Copy() *Logger {
+	return &Logger{
+		Level:      l.Level,
+		Output:     l.Output,
+		Prefix:     l.Prefix,
+		WrapPrefix: l.WrapPrefix,
+	}
 }
 
 func (l *Logger) Writer(level LogLevel) io.Writer {
 	return &LogWriter{
-		Logger: l,
+		Logger: l.Copy(),
 		Level:  level,
 	}
+}
+
+func (l *Logger) PWriter(label string, level LogLevel) io.Writer {
+
+	if l.Prefix != "" {
+		label = fmt.Sprintf("%s / %s", l.Prefix, label)
+	}
+
+	var lw = &LogWriter{
+		Logger: l.Copy(),
+		Level:  level,
+	}
+	lw.Logger.Prefix = label
+	return lw
 }
 
 func (l *Logger) Debug(args ...interface{}) {
@@ -126,25 +148,46 @@ func (l *Logger) Errorf(format string, args ...interface{}) {
 	}
 }
 
+// Fatal is a convenience function for logging an error and exiting the program.
+func (l *Logger) Fatal(errorcode int, args ...interface{}) {
+	l.Error(args...)
+	os.Exit(errorcode)
+}
+
+// Fatalf is a convenience function for logging an error and exiting the program.
+func (l *Logger) Fatalf(errorcode int, format string, args ...interface{}) {
+	l.Errorf(format, args...)
+	os.Exit(errorcode)
+}
+
 func (l *Logger) Log(level LogLevel, args ...interface{}) {
 	l.log(level, args...)
 }
 
 func (l *Logger) writePrefix(level LogLevel, w io.Writer) {
-	_, _ = w.Write([]byte("["))
+	var b = new(bytes.Buffer)
+
+	_, _ = b.Write([]byte("["))
 	if l.Prefix != "" {
-		_, _ = w.Write([]byte(l.Prefix))
-		_, _ = w.Write([]byte(" / "))
+		_, _ = b.Write([]byte(l.Prefix))
+		_, _ = b.Write([]byte(" / "))
 	}
 
-	_, _ = l.Output.Write([]byte(level.String()))
-	_, _ = l.Output.Write([]byte("]: "))
+	_, _ = b.Write([]byte(level.String()))
+	_, _ = b.Write([]byte("]: "))
+
+	var prefix = b.String()
+	if l.WrapPrefix != nil {
+		prefix = l.WrapPrefix(level, prefix)
+	}
+
+	_, _ = w.Write([]byte(prefix))
 }
 
-func (l *Logger) writeSuffix() {
+func (l *Logger) writeSuffix(w io.Writer) {
 	if l.Suffix != "" {
-		_, _ = l.Output.Write([]byte(" "))
-		_, _ = l.Output.Write([]byte(l.Suffix))
+		_, _ = w.Write([]byte(" "))
+		_, _ = w.Write([]byte(l.Suffix))
 	}
 }
 
@@ -153,11 +196,19 @@ func (l *Logger) log(level LogLevel, args ...interface{}) {
 		return
 	}
 
-	l.writePrefix(level, l.Output)
+	var b = new(bytes.Buffer)
+	l.writePrefix(level, b)
+	fmt.Fprint(b, args...)
+	l.writeSuffix(b)
 
-	fmt.Fprint(l.Output, args...)
+	var message = b.String()
+	if l.WrapPrefix != nil {
+		message = l.WrapPrefix(level, message)
+	}
 
-	l.writeSuffix()
+	_, _ = l.Output.Write(
+		[]byte(message),
+	)
 
 	_, _ = l.Output.Write([]byte("\n"))
 }
