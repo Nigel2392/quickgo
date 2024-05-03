@@ -225,9 +225,10 @@ func main() {
 	case flagger.Use != "":
 
 		// Parse optional extra context provided by CLI arguments.
-		var ctx = parseCommandlineContext(flagSet.Args(), false)
-
-		var proj, close, err = qg.ReadProjectConfig(flagger.Use)
+		var (
+			ctx              = parseCommandlineContext(flagSet.Args(), false)
+			proj, close, err = qg.ReadProjectConfig(flagger.Use)
+		)
 		if err != nil {
 			panic(fmt.Errorf("failed to read project config: %w", err))
 		}

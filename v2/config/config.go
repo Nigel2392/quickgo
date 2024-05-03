@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/quickgo/v2/command"
 	"github.com/Nigel2392/quickgo/v2/logger"
 	"github.com/Nigel2392/quickgo/v2/quickfs"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -19,14 +20,36 @@ const (
 	QUICKGO_CONFIG_NAME = "quickgo.yaml" // Config file for QuickGo, resides in the executable directory.
 	PROJECT_CONFIG_NAME = "quickgo.yaml" // Config file for the project, resides in the project (working) directory.
 	PROJECT_ZIP_NAME    = "project.zip"  // The name of the project zip file.
+	LOCKFILE_NAME       = "quickgo.lock" // The lock file name.
 
 	// Error messages.
-	ErrProjectMissing = ErrorStr("project config not found")
 	ErrCommandMissing = ErrorStr("command not found")
+	ErrProjectMissing = ErrorStr("project config not found")
+	ErrProjectInvalid = ErrorStr("project config is invalid")
 )
+
+var (
+	ErrProjectName = errors.Wrap(
+		ErrProjectInvalid,
+		"project name cannot be a blank string, period or filepath",
+	)
+)
+
+func IsLocked(path string) error {
+	var lockfile = filepath.Join(path, LOCKFILE_NAME)
+	var _, err = os.Stat(lockfile)
+	if err == nil {
+		return errors.Errorf("project is locked: %s", path)
+	}
+	return nil
+}
 
 type (
 	ErrorStr string
+
+	Validator interface {
+		Validate() error
+	}
 
 	// Config represents the configuration for QuickGo.
 	QuickGo struct {
@@ -141,6 +164,15 @@ func ExampleProjectConfig() *Project {
 			},
 		},
 	}
+}
+
+// Validate validates the project configuration.
+func (p *Project) Validate() error {
+	var name = strings.TrimPrefix(p.Name, ".")
+	if strings.Contains(name, "/") || strings.Contains(name, "\\") || name == "" {
+		return ErrProjectName
+	}
+	return nil
 }
 
 func (p *Project) Command(name string, context map[string]any) (*ProjectCommand, error) {

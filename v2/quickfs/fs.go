@@ -75,14 +75,17 @@ func PrintRootFn(w io.Writer, root *FSDirectory, indentString string, wrap func(
 	return 1 + printDir(w, root, 1, indentString, wrap)
 }
 
-func IsText(data []byte) bool {
+func IsTextReader(r io.Reader) bool {
 	var (
-		fileReader  = bytes.NewReader(data)
-		fileScanner = bufio.NewScanner(fileReader)
+		fileScanner = bufio.NewScanner(r)
 	)
 
 	fileScanner.Split(bufio.ScanLines)
 	fileScanner.Scan()
 
 	return utf8.Valid(fileScanner.Bytes())
+}
+
+func IsText[T string | []byte](data T) bool {
+	return IsTextReader(bytes.NewReader([]byte(data)))
 }

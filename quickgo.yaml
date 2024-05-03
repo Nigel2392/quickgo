@@ -38,9 +38,9 @@ commands:
                   command: echo
                   args:
                     - $customProjectName
-delimLeft: ${{
+delimLeft: '@{{'
 delimRight: '}}'
 exclude:
     - '*node_modules*'
     - '*dist*'
-    - ./.git
+    - .git

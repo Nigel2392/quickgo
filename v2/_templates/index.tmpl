@@ -2,66 +2,7 @@
 
 {{define "content"}}
     <div class="box-content">
-        {{$showPreview := .ShowPreview}}
-        {{$raw := .Raw}}
-        {{if .DirEmpty}}
-            {{if not .Raw}}
-                <div class="quickgo-dir-link-container">
-                    <a class="quickgo-dir-link quickgo-dir" href="../{{if $showPreview}}?preview=true{{end}}">{{if .IsFile}}./{{else}}../{{end}}</a>
-                    {{if .Datasize}}<span class="quickgo-datasize">Total size: {{.Datasize}}</span>{{end}}
-                </div>
-
-            {{end}}
-            <div style="display: flex;align-items: center;justify-content: center;height:50%;">
-                <h1 style="color:#ff5555;">Directory is empty</h1>
-            </div>
-        {{else}}
-            {{if .IsRoot}}
-                {{range $f := .Dirs}}
-                    <div class="quickgo-dir-link-container">
-                        <a class="quickgo-dir-link quickgo-dir" href="{{if $raw}}#{{else}}{{$f.Name}}/{{if $showPreview}}?preview=true{{end}}{{end}}">
-                            {{$f.Name}}
-                            {{if $showPreview}}<iframe class="description" src="{{$f.Name}}/?raw=true"></iframe>{{end}}
-                        </a>
-                        <span class="quickgo-datasize">{{$f.SizeStr}}</span>
-                    </div>
-                {{end}}
-            {{else if .IsFile}}
-                {{if not .Raw}}
-                    <div class="quickgo-dir-link-container">
-                        <a class="quickgo-dir-link quickgo-dir" href="../{{if $showPreview}}?preview=true{{end}}">{{if .IsFile}}./{{else}}../{{end}}</a>
-                        {{if .Datasize}}<span class="quickgo-datasize">Total size: {{.Datasize}}</span>{{end}}
-                    </div>
-
-                {{end}}
-                <pre class="quickgo-file-content">{{.FileContent}}</pre>
-            {{else}}
-                {{if not .Raw}}
-                    <div class="quickgo-dir-link-container">
-                        <a class="quickgo-dir-link quickgo-dir" href="../{{if $showPreview}}?preview=true{{end}}">{{if .IsFile}}./{{else}}../{{end}}</a>
-                        {{if .Datasize}}<span class="quickgo-datasize">Total size: {{.Datasize}}</span>{{end}}
-                    </div>
-
-                {{end}}
-                {{range $f := .Dir.Children}}
-                    <div class="quickgo-dir-link-container">
-                        <a class="quickgo-dir-link quickgo-dir" href="{{if $raw}}#{{else}}{{$f.Name}}/{{if $showPreview}}?preview=true{{end}}{{end}}">
-                            {{$f.Name}}
-                            {{if $showPreview}}<iframe class="description" src="{{$f.Name}}/?raw=true"></iframe>{{end}}
-                        </a>
-                        <span class="quickgo-datasize">{{$f.SizeStr}}</span>
-                    </div>
-                {{end}}
-                {{range $f := .Dir.Files}}
-                    <div class="quickgo-dir-link-container">
-                        <a class="quickgo-dir-link quickgo-file" href="{{if $raw}}#{{else}}{{$f.Name}}/{{if $showPreview}}?preview=true{{end}}{{end}}">
-                            {{$f.Name}}
-                            {{if $showPreview}}<iframe class="description" src="{{$f.Name}}/?raw=true"></iframe>{{end}}
-                        </a>
-                        <span class="quickgo-datasize">{{$f.SizeStr}}</span>
-                    </div>
-                {{end}}
-            {{end}}
-        {{end}}
+        <h2>{{.Dir.GetName}}</h2>
+        <pre class="quickgo-file-content">{{.Content}}</pre>
     </div>
 {{end}}

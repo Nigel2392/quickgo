@@ -135,6 +135,10 @@ func (a *App) LoadProjectConfig(directory string) (err error) {
 	}
 	a.ProjectConfig = proj
 
+	if err = a.ProjectConfig.Validate(); err != nil {
+		return err
+	}
+
 	logger.Debugf("Loaded project config %s", a.ProjectConfig.Name)
 
 	return nil
@@ -168,6 +172,10 @@ func (a *App) WriteProject(proj *config.Project, directory string, raw bool) err
 		}
 	} else {
 		cwd = directory
+	}
+
+	if err = config.IsLocked(cwd); err != nil {
+		return err
 	}
 
 	// Setup context for project templates.
@@ -340,6 +348,11 @@ func (a *App) WriteProjectConfig(proj *config.Project) error {
 }
 
 func (a *App) ReadProjectConfig(name string) (proj *config.Project, closeFiles func(), err error) {
+
+	if name == "" || name == "." || strings.ContainsAny(name, `/\`) {
+		return nil, nil, config.ErrProjectName
+	}
+
 	var (
 		file *os.File
 		// dirPath    = getProjectFilePath(name, false)
@@ -534,11 +547,13 @@ type ProjectTemplateContext struct {
 	Project *config.Project
 	File    *quickfs.FSFile
 	Dir     *quickfs.FSDirectory
+	Content string
 }
 
 func (a *App) serveProjects(w http.ResponseWriter, r *http.Request, pathParts []string) {
 	var (
 		proj     *config.Project
+		parent   *quickfs.FSDirectory
 		fileLike quickfs.FileLike
 		err      error
 	)
@@ -558,7 +573,7 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request, pathParts []
 
 	defer closeFiles()
 
-	fileLike, err = proj.Root.Find(pathParts[1:])
+	parent, fileLike, err = proj.Root.FindWithParent(pathParts[1:])
 	if err != nil {
 		logger.Errorf("Failed to find file '%s': %v", path.Join(pathParts...), err)
 		http.Error(w, "Invalid path", http.StatusBadRequest)
@@ -579,8 +594,9 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request, pathParts []
 				path.Join(
 					"projects",
 					proj.Name,
+					parent.GetPath(),
 				),
-				proj.Name,
+				parent.GetName(),
 			)
 		}
 
@@ -615,6 +631,17 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request, pathParts []
 		return
 	}
 
+	var content = b.String()
+	file.IsText = quickfs.IsText(content)
+	if !file.IsText {
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Disposition", "attachment; filename="+file.GetPath())
+		if _, err = io.Copy(w, b); err != nil {
+			http.Error(w, "Failed to read file", http.StatusInternalServerError)
+		}
+		return
+	}
+
 	if tpl, err = html_template.ParseFS(embedFS, a.Patterns...); err != nil {
 		logger.Errorf("Failed to parse template: %v", err)
 		http.Error(w, "Failed to parse file", http.StatusInternalServerError)
@@ -624,6 +651,8 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request, pathParts []
 	var context = ProjectTemplateContext{
 		Project: proj,
 		File:    file,
+		Dir:     parent,
+		Content: content,
 	}
 
 	if err = tpl.ExecuteTemplate(w, "base", context); err != nil {
@@ -631,12 +660,6 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request, pathParts []
 		http.Error(w, "Failed to execute template", http.StatusInternalServerError)
 		return
 	}
-
-	// w.Header().Set("Content-Type", "application/octet-stream")
-	// w.Header().Set("Content-Disposition", "attachment; filename="+fileLike.GetPath())
-	// if _, err = io.Copy(w, fileLike.(*quickfs.FSFile)); err != nil {
-	// http.Error(w, "Failed to read file", http.StatusInternalServerError)
-	// }
 }
 
 func (a *App) executeTemplate(proj *config.Project, w io.Writer, content string) error {

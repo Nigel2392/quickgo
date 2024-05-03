@@ -37,6 +37,12 @@ func LoadYaml[T any](path string) (*T, error) {
 		return nil, err
 	}
 
+	if validator, ok := any(data).(Validator); ok {
+		if err = validator.Validate(); err != nil {
+			return nil, err
+		}
+	}
+
 	return data, nil
 }
 

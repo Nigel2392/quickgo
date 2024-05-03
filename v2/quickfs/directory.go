@@ -136,8 +136,17 @@ func (d *FSDirectory) GetPath() string {
 }
 
 func (d *FSDirectory) Find(path []string) (FileLike, error) {
+	var _, fl, err = d.find(nil, path)
+	return fl, err
+}
+
+func (d *FSDirectory) FindWithParent(path []string) (*FSDirectory, FileLike, error) {
+	return d.find(nil, path)
+}
+
+func (d *FSDirectory) find(parent *FSDirectory, path []string) (*FSDirectory, FileLike, error) {
 	if path == nil {
-		return nil, &fs.PathError{
+		return nil, nil, &fs.PathError{
 			Op:   "find",
 			Path: d.Path,
 			Err:  os.ErrInvalid,
@@ -145,21 +154,21 @@ func (d *FSDirectory) Find(path []string) (FileLike, error) {
 	}
 
 	if len(path) == 0 {
-		return d, nil
+		return parent, d, nil
 	}
 
 	var name = path[0]
 	var dir, ok = d.Directories[name]
 	if ok {
-		return dir.Find(path[1:])
+		return dir.find(d, path[1:])
 	}
 
 	f, ok := d.Files[name]
 	if ok && len(path) == 1 {
-		return f, nil
+		return d, f, nil
 	}
 
-	return nil, os.ErrNotExist
+	return nil, nil, os.ErrNotExist
 }
 
 func (d *FSDirectory) AddDirectory(dirPath string) {
@@ -192,7 +201,7 @@ func (d *FSDirectory) AddDirectory(dirPath string) {
 
 }
 
-func (d *FSDirectory) AddFile(filePath string, reader io.ReadCloser) {
+func (d *FSDirectory) AddFile(filePath string, reader io.ReadCloser) *FSFile {
 	filePath = filepath.ToSlash(filePath)
 	filePath = filepath.FromSlash(filePath)
 	filePath = filepath.Clean(filePath)
@@ -210,11 +219,13 @@ func (d *FSDirectory) AddFile(filePath string, reader io.ReadCloser) {
 		dir = dir.Directories[part]
 	}
 
-	dir.Files[parts[len(parts)-1]] = &FSFile{
+	var f = &FSFile{
 		Name:   parts[len(parts)-1],
 		Path:   filePath,
 		Reader: reader,
 	}
+	dir.Files[parts[len(parts)-1]] = f
+	return f
 }
 
 func (d *FSDirectory) ForEach(fn func(FileLike) (cancel bool, err error)) (cancel bool, err error) {
