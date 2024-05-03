@@ -125,7 +125,7 @@ func main() {
 
 	flagSet.Usage = func() {
 		fmt.Println(quickgo.Craft(quickgo.CMD_Cyan, "QuickGo: A simple project generator and server."))
-		fmt.Println("Usage: quickgo [flags] [?command] [?args]")
+		fmt.Println("Usage: quickgo [flags | command] [?args]")
 		fmt.Println("Available application flags:")
 		flagSet.VisitAll(func(f *flag.Flag) {
 
@@ -168,6 +168,16 @@ func main() {
 		}
 	}
 
+	if len(os.Args) < 2 {
+		flagSet.Usage()
+		os.Exit(1)
+	}
+
+	err = flagSet.Parse(os.Args[1:])
+	if err != nil {
+		logger.Fatal(1, err)
+	}
+
 	logger.Setup(&logger.Logger{
 		Level:      logger.InfoLevel,
 		Output:     os.Stdout,
@@ -183,16 +193,6 @@ func main() {
 
 	// Initially load the application.
 	qg, err = quickgo.LoadApp()
-	if err != nil {
-		logger.Fatal(1, err)
-	}
-
-	if len(os.Args) < 2 {
-		flagSet.Usage()
-		os.Exit(1)
-	}
-
-	err = flagSet.Parse(os.Args[1:])
 	if err != nil {
 		logger.Fatal(1, err)
 	}

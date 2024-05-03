@@ -58,7 +58,7 @@ func ColoredLogWrapper(l logger.LogLevel, s string) string {
 }
 
 var logWrapperMap = map[logger.LogLevel]func(l logger.LogLevel, s string) string{
-	logger.DebugLevel: wrapLog(CMD_Blue),
+	logger.DebugLevel: wrapLog(CMD_BRIGHT_Purple),
 	logger.InfoLevel:  wrapLog(CMD_Cyan),
 	logger.WarnLevel:  wrapLog(CMD_Yellow),
 	logger.ErrorLevel: wrapLog(CMD_Red, CMD_Bold),

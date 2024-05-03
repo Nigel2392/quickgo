@@ -174,6 +174,8 @@ func (a *App) WriteProject(proj *config.Project, directory string, raw bool) err
 		cwd = directory
 	}
 
+	logger.Debugf("Checking if project is locked in '%s'", cwd)
+
 	if err = config.IsLocked(cwd); err != nil {
 		return err
 	}
