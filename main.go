@@ -139,8 +139,15 @@ func main() {
 				name = fmt.Sprintf("%s=%s", name, f.DefValue)
 			}
 
-			fmt.Printf("  -%s\n", quickgo.Craft(quickgo.CMD_Cyan, name))
-			fmt.Printf("    %s: %s\n", f.Name, f.Usage)
+			fmt.Printf(
+				"  -%s: %s\n",
+				quickgo.BuildColorString(
+					quickgo.CMD_Cyan,
+					quickgo.CMD_Bold,
+					name,
+				),
+				f.Usage,
+			)
 		})
 
 		// Try to load the project configuration.
@@ -155,11 +162,14 @@ func main() {
 		} else if err == nil {
 
 			// Project found, commands is map -> sort to slice.
-			var commands = make([]string, 0, len(qg.ProjectConfig.Commands))
-			for k := range qg.ProjectConfig.Commands {
-				commands = append(commands, k)
+			var commands = make([]*config.ProjectCommand, 0, len(qg.ProjectConfig.Commands))
+			for _, v := range qg.ProjectConfig.Commands {
+				commands = append(commands, v)
 			}
-			slices.Sort(commands)
+
+			slices.SortFunc(commands, func(a, b *config.ProjectCommand) int {
+				return strings.Compare(a.Name, b.Name)
+			})
 
 			fmt.Println(
 				quickgo.Craft(
@@ -168,7 +178,11 @@ func main() {
 				),
 			)
 			for _, c := range commands {
-				fmt.Printf("  - %s\n", quickgo.Craft(quickgo.CMD_Cyan, c))
+				if c.Description == "" {
+					fmt.Printf("  - %s\n", quickgo.Craft(quickgo.CMD_Cyan, c.Name))
+					continue
+				}
+				fmt.Printf("  - %s: %s", quickgo.Craft(quickgo.CMD_Cyan, c.Name), c.Description)
 			}
 		}
 	}

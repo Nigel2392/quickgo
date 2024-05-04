@@ -13,6 +13,7 @@ import (
 	"github.com/Nigel2392/quickgo/v2/quickgo/logger"
 	"github.com/Nigel2392/quickgo/v2/quickgo/quickfs"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -68,9 +69,9 @@ type (
 		Context map[string]any `yaml:"context" json:"context"`
 
 		// List of commands to run
-		BeforeCopy *command.StepList          `yaml:"beforeCopy" json:"beforeCopy"`
-		AfterCopy  *command.StepList          `yaml:"afterCopy" json:"afterCopy"`
-		Commands   map[string]*ProjectCommand `yaml:"commands" json:"commands"` // [name] => [steps]
+		BeforeCopy *command.StepList `yaml:"beforeCopy" json:"beforeCopy"`
+		AfterCopy  *command.StepList `yaml:"afterCopy" json:"afterCopy"`
+		Commands   ProjectCommandMap `yaml:"commands" json:"commands"` // [name] => [steps]
 
 		// Variable delimiters for the project templates.
 		DelimLeft  string `yaml:"delimLeft" json:"delimLeft"`
@@ -87,7 +88,8 @@ type (
 	ProjectCommand struct {
 		// The name of the command.
 		// Only used internally for logging purposes.
-		name string `yaml:"-" json:"-"`
+		Name        string `yaml:"-" json:"-"`
+		Description string `yaml:"description" json:"description"`
 		// Args are the arguments to pass to the command.
 		// These will be asked via stdin if not provided.
 		Args map[string]any `yaml:"args" json:"args"`
@@ -95,6 +97,20 @@ type (
 		Steps *command.StepList `yaml:"steps" json:"steps"`
 	}
 )
+
+type ProjectCommandMap map[string]*ProjectCommand
+
+func (p *ProjectCommandMap) UnmarshalYAML(value *yaml.Node) error {
+	var commands = make(map[string]*ProjectCommand)
+	if err := value.Decode(&commands); err != nil {
+		return err
+	}
+	for k, v := range commands {
+		v.Name = k
+	}
+	*p = commands
+	return nil
+}
 
 func (e ErrorStr) Error() string {
 	return string(e)
@@ -147,8 +163,9 @@ func ExampleProjectConfig() *Project {
 				},
 			},
 		},
-		Commands: map[string]*ProjectCommand{
+		Commands: ProjectCommandMap{
 			"echoName": {
+				Description: "Echo the project name, supply one with customProjectName=myValue",
 				Args: map[string]any{
 					"customProjectName": "$projectName",
 				},
@@ -185,7 +202,7 @@ func (p *Project) Command(name string, context map[string]any) (*ProjectCommand,
 		cmd.Args = make(map[string]any)
 	}
 
-	cmd.name = name
+	cmd.Name = name
 	cmd.Args["projectName"] = p.Name
 	cmd.Args["projectPath"], _ = os.Getwd()
 
@@ -262,7 +279,7 @@ func (c *ProjectCommand) Execute(env map[string]any) error {
 
 	var jsonData, err = json.MarshalIndent(newEnv, "", "  ")
 	if err == nil {
-		logger.Debugf("Running command '%s' with environment: %s", c.name, jsonData)
+		logger.Debugf("Running command '%s' with environment: %s", c.Name, jsonData)
 	} else {
 		logger.Warnf("Error marshalling environment map for logging: %v", err)
 	}

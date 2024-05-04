@@ -29,9 +29,9 @@ afterCopy:
             - $projectPath
 commands:
     echoName:
+        description: Echo Project Name
         args:
             customProjectName: $Data
-            customProjectName1:
         steps:
             steps:
                 - name: Echo Project Name

@@ -24,6 +24,15 @@ func Craft(color, s any) string {
 	return fmt.Sprintf("%s%v%s", color, s, CMD_Reset)
 }
 
+func BuildColorString(colors ...string) string {
+	var s strings.Builder
+	for _, color := range colors {
+		s.WriteString(color)
+	}
+	s.WriteString(CMD_Reset)
+	return s.String()
+}
+
 func PrintLogo() {
 	// Quick GO logo.
 	str := Craft(CMD_Cyan, " $$$$$$\\            $$\\           $$\\         "+Craft(CMD_Cyan, "  $$$$$$\\\n")) +
