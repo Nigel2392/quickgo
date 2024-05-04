@@ -10,11 +10,11 @@ type (
 	// quickgo.loaded
 	AppHook func(*App) error
 
-	// quickgo.funcs.listProjects
-	AppListProjectsHook func(*App, []string) ([]string, error)
-
 	// quickgo.server
 	AppServeHook func(*App, http.ResponseWriter, *http.Request) (written bool, err error)
+
+	// quickgo.funcs.listProjects
+	AppListProjectsHook func(*App, []string) ([]string, error)
 
 	// quickgo.project.loaded
 	// quickgo.project.example
@@ -30,8 +30,8 @@ type (
 
 const (
 	HookQuickGoLoaded       = "quickgo.loaded"
-	HookQuickGoListProjects = "quickgo.funcs.listProjects"
 	HookQuickGoServer       = "quickgo.server"
+	HookQuickGoListProjects = "quickgo.funcs.listProjects"
 	HookProjectLoaded       = "quickgo.project.loaded"
 	HookProjectBeforeLoad   = "quickgo.project.beforeLoad"
 	HookProjectExample      = "quickgo.project.example"

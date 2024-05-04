@@ -582,6 +582,7 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		} else if served {
 			logger.Debugf("'%s' was served and hijacked by a hook", r.URL.Path)
+			return
 		}
 	}
 
