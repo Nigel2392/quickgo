@@ -401,7 +401,8 @@ func (a *App) ReadProjectConfig(name string) (proj *config.Project, closeFiles f
 	var (
 		file *os.File
 		// dirPath    = getProjectFilePath(name, false)
-		absDirPath = getProjectFilePath(name, true)
+		// absDirPath = getProjectFilePath(name, true)
+		absDirPath = a.GetProjectDirectoryPath(name)
 	)
 	proj, err = config.LoadYaml[config.Project](
 		path.Join(absDirPath, config.PROJECT_CONFIG_NAME),
@@ -480,6 +481,10 @@ func (a *App) ReadProjectConfig(name string) (proj *config.Project, closeFiles f
 	}
 
 	return proj, closeFiles, nil
+}
+
+func (a *App) GetProjectDirectoryPath(name string) string {
+	return getProjectFilePath(name, true)
 }
 
 func (a *App) CopyFileContent(proj *config.Project, file *os.File, f *quickfs.FSFile, raw bool) error {

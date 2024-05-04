@@ -1,11 +1,13 @@
 package quickgo
 
 import (
+	"archive/zip"
 	"bytes"
 	"fmt"
 	html_template "html/template"
 	"io"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -16,6 +18,23 @@ import (
 	"github.com/Nigel2392/quickgo/v2/quickgo/quickfs"
 	"github.com/pkg/errors"
 )
+
+func copyToZipfile(z *zip.Writer, name string, absPath string) error {
+	var f, err = os.Open(absPath)
+	if err != nil {
+		return errors.Wrapf(err, "failed to open '%s'", absPath)
+	}
+	defer f.Close()
+
+	w, err := z.Create(name)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create '%s'", name)
+	}
+
+	_, err = io.Copy(w, f)
+	return err
+
+}
 
 func (a *App) HttpHandler() http.Handler {
 	var mux = http.NewServeMux()
@@ -73,6 +92,36 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request) {
 	)
 
 	var pathParts = strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if r.URL.Query().Get("download") != "" && len(pathParts) == 1 {
+
+		var (
+			projName   = pathParts[0]
+			projPath   = a.GetProjectDirectoryPath(projName)
+			configFile = filepath.Join(projPath, config.PROJECT_CONFIG_NAME)
+			projectZip = filepath.Join(projPath, config.PROJECT_ZIP_NAME)
+		)
+
+		w.Header().Set("Content-Type", "application/zip")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.zip", projName))
+
+		var zf = zip.NewWriter(w)
+		defer zf.Close()
+
+		if err = copyToZipfile(zf, config.PROJECT_CONFIG_NAME, configFile); err != nil {
+			logger.Errorf("Failed to copy '%s' to zip: %v", configFile, err)
+			http.Error(w, "Failed to copy to zip", http.StatusInternalServerError)
+			return
+		}
+
+		if err = copyToZipfile(zf, config.PROJECT_ZIP_NAME, projectZip); err != nil {
+			logger.Errorf("Failed to copy '%s' to zip: %v", projectZip, err)
+			http.Error(w, "Failed to copy to zip", http.StatusInternalServerError)
+			return
+		}
+
+		logger.Infof("%s Downloaded project '%s'", r.RemoteAddr, projName)
+		return
+	}
 
 	proj, closeFiles, err := a.ReadProjectConfig(pathParts[0])
 	if err != nil {

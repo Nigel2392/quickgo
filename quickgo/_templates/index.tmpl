@@ -3,9 +3,16 @@
 {{define "content"}}
     <div class="box-content">
         <h2>View all projects:</h2>
-        <ul>
+        <ul class="quickgo-project-wrapper">
             {{ range $project := .ObjectList }}
-                <li><a href="{{ ProjectURL $project }}">{{$project.Name}}</a></li>
+                <li class="quickgo-project">
+                    <div class="quickgo-project-info">
+                        <a href="{{ ProjectURL $project }}">{{$project.Name}}</a>
+                    </div>
+                    <div class="quickgo-project-buttons">
+                        <a href="{{ ProjectURL $project }}?download=1" class="button">Export</a>
+                    </div>
+                </li>
             {{ end }}
         </ul>
     </div>
