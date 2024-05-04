@@ -191,7 +191,6 @@ func main() {
 
 	if len(os.Args) < 2 {
 		logger.Fatal(1, "no command provided, run 'quickgo -h' for more information.")
-		os.Exit(1)
 	}
 
 	// Initially load the application.
@@ -330,13 +329,13 @@ func main() {
 		}
 
 		if qg.Config.TLSKey != "" && qg.Config.TLSCert != "" {
-			fmt.Printf("Serving on https://%s\n", addr)
+			logger.Infof("Serving on https://%s", addr)
 			err = server.ListenAndServeTLS(
 				qg.Config.TLSCert,
 				qg.Config.TLSKey,
 			)
 		} else {
-			fmt.Printf("Serving on http://%s\n", addr)
+			logger.Infof("Serving on http://%s", addr)
 			err = server.ListenAndServe()
 		}
 
@@ -384,6 +383,7 @@ func enableVerboseLogging(b string) error {
 	}
 
 	if boolVal {
+		logger.Info("Enabling verbose logging.")
 		logger.SetLevel(logger.DebugLevel)
 	} else {
 		logger.SetLevel(logger.InfoLevel)

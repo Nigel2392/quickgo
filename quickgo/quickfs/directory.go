@@ -8,6 +8,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/elliotchance/orderedmap/v2"
 )
 
 var (
@@ -22,10 +24,10 @@ type FSDirectory struct {
 	Path string
 
 	// Files in the directory.
-	Files map[string]File
+	Files *orderedmap.OrderedMap[string, *FSFile]
 
 	// Directories in the directory.
-	Directories map[string]*FSDirectory
+	Directories *orderedmap.OrderedMap[string, *FSDirectory]
 
 	// Root directory.
 	root *FSDirectory
@@ -45,14 +47,24 @@ func (d *FSDirectory) String() string {
 	var b strings.Builder
 	b.WriteString(d.Name)
 	b.WriteString(":\n")
-	for _, dir := range d.Directories {
+	// for _, dir := range d.Directories {
+	// 	b.WriteString("   ")
+	// 	b.WriteString(dir.GetName())
+	// 	b.WriteString("\n")
+	// }
+	// for _, f := range d.Files {
+	// 	b.WriteString("  ")
+	// 	b.WriteString(f.GetName())
+	// 	b.WriteString("\n")
+	// }
+	for el := d.Directories.Front(); el != nil; el = el.Next() {
 		b.WriteString("   ")
-		b.WriteString(dir.GetName())
+		b.WriteString(el.Value.GetName())
 		b.WriteString("\n")
 	}
-	for _, f := range d.Files {
+	for el := d.Files.Front(); el != nil; el = el.Next() {
 		b.WriteString("  ")
-		b.WriteString(f.GetName())
+		b.WriteString(el.Value.GetName())
 		b.WriteString("\n")
 	}
 	return b.String()
@@ -67,8 +79,8 @@ func NewFSDirectory(name, dirPath string, root *FSDirectory) *FSDirectory {
 	return &FSDirectory{
 		Name:        name,
 		Path:        dirPath,
-		Files:       make(map[string]File),
-		Directories: make(map[string]*FSDirectory),
+		Files:       orderedmap.NewOrderedMap[string, *FSFile](),
+		Directories: orderedmap.NewOrderedMap[string, *FSDirectory](),
 		root:        root,
 	}
 }
@@ -118,9 +130,9 @@ loop:
 		}
 
 		if sub != nil {
-			d.Directories[n] = sub
+			d.Directories.Set(n, sub)
 		} else {
-			d.Files[n] = f
+			d.Files.Set(n, f)
 		}
 	}
 
@@ -158,12 +170,12 @@ func (d *FSDirectory) find(parent *FSDirectory, path []string) (*FSDirectory, Fi
 	}
 
 	var name = path[0]
-	var dir, ok = d.Directories[name]
+	var dir, ok = d.Directories.Get(name)
 	if ok {
 		return dir.find(d, path[1:])
 	}
 
-	f, ok := d.Files[name]
+	f, ok := d.Files.Get(name)
 	if ok && len(path) == 1 {
 		return d, f, nil
 	}
@@ -189,11 +201,17 @@ func (d *FSDirectory) AddDirectory(dirPath string) {
 	}
 
 	for _, part := range parts {
-		if _d, ok = dir.Directories[part]; !ok {
+		//if _d, ok = dir.Directories[part]; !ok {
+		//	_d = NewFSDirectory(
+		//		part, filepath.Join(dir.Path, part), root,
+		//	)
+		//	dir.Directories[part] = _d
+		//}
+		if _d, ok = dir.Directories.Get(part); !ok {
 			_d = NewFSDirectory(
 				part, filepath.Join(dir.Path, part), root,
 			)
-			dir.Directories[part] = _d
+			dir.Directories.Set(part, _d)
 		}
 
 		dir = _d
@@ -208,15 +226,24 @@ func (d *FSDirectory) AddFile(filePath string, reader io.ReadCloser) *FSFile {
 	var (
 		parts = strings.Split(filePath, string(os.PathSeparator))
 		dir   = d
+		ok    bool
 	)
 	for i := 0; i < len(parts)-1; i++ {
 		var part = parts[i]
-		if _, ok := dir.Directories[parts[i]]; !ok {
-			dir.Directories[part] = NewFSDirectory(
-				part, filepath.Join(dir.Path, part), d.root,
+		//if _, ok := dir.Directories[parts[i]]; !ok {
+		//	dir.Directories[part] = NewFSDirectory(
+		//		part, filepath.Join(dir.Path, part), d.root,
+		//	)
+		//}
+		//dir = dir.Directories[part]
+		if d, ok = dir.Directories.Get(part); !ok {
+			d = NewFSDirectory(
+				part, filepath.Join(dir.Path, part), dir.root,
 			)
+			dir.Directories.Set(part, d)
 		}
-		dir = dir.Directories[part]
+
+		dir = d
 	}
 
 	var f = &FSFile{
@@ -224,7 +251,8 @@ func (d *FSDirectory) AddFile(filePath string, reader io.ReadCloser) *FSFile {
 		Path:   filePath,
 		Reader: reader,
 	}
-	dir.Files[parts[len(parts)-1]] = f
+	// dir.Files[parts[len(parts)-1]] = f
+	dir.Files.Set(f.Name, f)
 	return f
 }
 
@@ -234,15 +262,14 @@ func (d *FSDirectory) ForEach(fn func(FileLike) (cancel bool, err error)) (cance
 		return
 	}
 
-	for _, dir := range d.Directories {
-		cancel, err = dir.ForEach(fn)
+	for el := d.Directories.Front(); el != nil; el = el.Next() {
+		cancel, err = el.Value.ForEach(fn)
 		if cancel || err != nil {
 			return
 		}
 	}
-
-	for _, f := range d.Files {
-		cancel, err = fn(f)
+	for el := d.Files.Front(); el != nil; el = el.Next() {
+		cancel, err = fn(el.Value)
 		if cancel || err != nil {
 			return
 		}

@@ -589,6 +589,7 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case primary == "projects":
 
+		logServe("projects", r)
 		a.serveProjects(w, r, pathParts[1:])
 
 	case primary == "favicon.ico" && len(pathParts) == 1:
@@ -612,7 +613,7 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case primary == "static":
 
 		// Serve static files.
-		logger.Debugf("Serving static file %s", r.URL.Path)
+		logServe("static file", r)
 		// Serve from embedded file system.
 		var handler = http.FileServer(http.FS(staticFS))
 		handler = http.StripPrefix("/static/", handler)
@@ -623,6 +624,10 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		logger.Debugf("Invalid request path '%s'", r.URL.Path)
 		http.Error(w, "Invalid path", http.StatusBadRequest)
 	}
+}
+
+func logServe(where string, r *http.Request) {
+	logger.Debugf("Serving %s to %s on path '%s'", where, r.RemoteAddr, r.URL.Path)
 }
 
 type ProjectTemplateContext struct {
@@ -641,7 +646,7 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request, pathParts []
 	)
 
 	if len(pathParts) == 0 {
-		logger.Debugf("Invalid request path '%s'", r.URL.Path)
+		logger.Errorf("Invalid request path '%s'", r.URL.Path)
 		http.Error(w, "Invalid path", http.StatusBadRequest)
 		return
 	}
@@ -682,7 +687,7 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request, pathParts []
 			)
 		}
 
-		quickfs.PrintRootFn(w, dir, "&nbsp;", func(indent int, fl quickfs.FileLike) string {
+		quickfs.PrintRootFn(w, dir, "&nbsp;&nbsp;", func(indent int, fl quickfs.FileLike) string {
 			var (
 				p   = fl.GetPath()
 				url = filepath.ToSlash(

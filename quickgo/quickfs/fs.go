@@ -46,19 +46,19 @@ func init() {
 }
 
 func printDir(w io.Writer, d *FSDirectory, indent int, indentString string, wrap func(int, FileLike) string) (count int) {
-	count += 1 + len(d.Files)
+	count += 1 + d.Files.Len()
 
-	for _, dir := range d.Directories {
+	for dir := d.Directories.Front(); dir != nil; dir = dir.Next() {
 		fmt.Fprintf(w,
 			"%s%s\n",
 			strings.Repeat(indentString, indent*2),
-			wrap(indent, dir),
+			wrap(indent, dir.Value),
 		)
-		count += printDir(w, dir, indent+1, indentString, wrap)
+		count += printDir(w, dir.Value, indent+1, indentString, wrap)
 	}
 
-	for _, f := range d.Files {
-		fmt.Fprintf(w, "%s%s\n", strings.Repeat(indentString, indent*2), wrap(indent, f))
+	for f := d.Files.Front(); f != nil; f = f.Next() {
+		fmt.Fprintf(w, "%s%s\n", strings.Repeat(indentString, indent*2), wrap(indent, f.Value))
 	}
 
 	return count

@@ -9,39 +9,53 @@ import (
 	"testing"
 
 	"github.com/Nigel2392/quickgo/v2/quickgo/quickfs"
+	"github.com/elliotchance/orderedmap/v2"
 )
 
-func makeFiles(path string, count int) map[string]quickfs.File {
-	var files = make(map[string]quickfs.File, count)
+func makeFiles(path string, count int) *orderedmap.OrderedMap[string, *quickfs.FSFile] {
+	var files = orderedmap.NewOrderedMap[string, *quickfs.FSFile]()
 	for i := 1; i < count+1; i++ {
 		var n = fmt.Sprintf("file%d", i)
-		files[n] = &quickfs.FSFile{
+		files.Set(n, &quickfs.FSFile{
 			Name: n,
 			Path: filepath.Join(path, n),
-		}
+		})
 	}
 	return files
 }
 
+func getDirectoryMap() *orderedmap.OrderedMap[string, *quickfs.FSDirectory] {
+	var m = orderedmap.NewOrderedMap[string, *quickfs.FSDirectory]()
+	var dir = &quickfs.FSDirectory{
+		Name:  "dir1", // 4
+		Path:  filepath.Join("root", "dir1"),
+		Files: makeFiles(filepath.Join("root", "dir1"), 2), // 5, 6
+		//Directories: map[string]*quickfs.FSDirectory{
+		//	"dir2": {
+		//		Name:        "dir2", // 7
+		//		Path:        filepath.Join("root", "dir1", "dir2"),
+		//		Files:       makeFiles(filepath.Join("root", "dir1", "dir2"), 2), // 8, 9
+		//		Directories: make(map[string]*quickfs.FSDirectory),
+		//	},
+		//},
+	}
+	m.Set("dir1", dir)
+	var inner = orderedmap.NewOrderedMap[string, *quickfs.FSDirectory]()
+	inner.Set("dir2", &quickfs.FSDirectory{
+		Name:        "dir2", // 7
+		Path:        filepath.Join("root", "dir1", "dir2"),
+		Files:       makeFiles(filepath.Join("root", "dir1", "dir2"), 2), // 8, 9
+		Directories: orderedmap.NewOrderedMap[string, *quickfs.FSDirectory](),
+	})
+	dir.Directories = inner
+	return m
+}
+
 var FileTree = &quickfs.FSDirectory{
-	Name:  "root", // 1
-	Path:  "root",
-	Files: makeFiles("root", 2), // 2, 3
-	Directories: map[string]*quickfs.FSDirectory{
-		"dir1": {
-			Name:  "dir1", // 4
-			Path:  filepath.Join("root", "dir1"),
-			Files: makeFiles(filepath.Join("root", "dir1"), 2), // 5, 6
-			Directories: map[string]*quickfs.FSDirectory{
-				"dir2": {
-					Name:        "dir2", // 7
-					Path:        filepath.Join("root", "dir1", "dir2"),
-					Files:       makeFiles(filepath.Join("root", "dir1", "dir2"), 2), // 8, 9
-					Directories: make(map[string]*quickfs.FSDirectory),
-				},
-			},
-		},
-	},
+	Name:        "root", // 1
+	Path:        "root",
+	Files:       makeFiles("root", 2), // 2, 3
+	Directories: getDirectoryMap(),
 }
 
 func TestForEach(t *testing.T) {
@@ -115,8 +129,8 @@ func TestAddDirectories(t *testing.T) {
 	var newRoot = &quickfs.FSDirectory{
 		Name:        "root",
 		Path:        "root",
-		Files:       make(map[string]quickfs.File),
-		Directories: make(map[string]*quickfs.FSDirectory),
+		Files:       orderedmap.NewOrderedMap[string, *quickfs.FSFile](),
+		Directories: orderedmap.NewOrderedMap[string, *quickfs.FSDirectory](),
 	}
 
 	for _, dir := range dirs {
@@ -184,8 +198,8 @@ func TestAddFiles(t *testing.T) {
 	var newRoot = &quickfs.FSDirectory{
 		Name:        "root",
 		Path:        "root",
-		Files:       make(map[string]quickfs.File),
-		Directories: make(map[string]*quickfs.FSDirectory),
+		Files:       orderedmap.NewOrderedMap[string, *quickfs.FSFile](),
+		Directories: orderedmap.NewOrderedMap[string, *quickfs.FSDirectory](),
 	}
 
 	for _, file := range files {
