@@ -168,11 +168,6 @@ func main() {
 		}
 	}
 
-	if len(os.Args) < 2 {
-		flagSet.Usage()
-		os.Exit(1)
-	}
-
 	err = flagSet.Parse(os.Args[1:])
 	if err != nil {
 		logger.Fatal(1, err)
@@ -195,6 +190,11 @@ func main() {
 	qg, err = quickgo.LoadApp()
 	if err != nil {
 		logger.Fatal(1, err)
+	}
+
+	if len(os.Args) < 2 {
+		flagSet.Usage()
+		os.Exit(1)
 	}
 
 	switch {

@@ -133,11 +133,12 @@ func (a *App) LoadProjectConfig(directory string) (err error) {
 	} else if err != nil {
 		return err
 	}
-	a.ProjectConfig = proj
 
-	if err = a.ProjectConfig.Validate(); err != nil {
+	if err = proj.Validate(); err != nil {
 		return err
 	}
+
+	a.ProjectConfig = proj
 
 	logger.Debugf("Loaded project config %s", a.ProjectConfig.Name)
 
