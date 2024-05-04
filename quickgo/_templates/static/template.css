@@ -125,7 +125,6 @@ body{
 .box-content {
     margin-top:10px;
     background-color: #f5f5f5;
-    padding-top: 20px;
     height:85vh !important;
     overflow-y: auto;
     /* border-radius: 0px 0px 5px 5px; */
@@ -139,26 +138,32 @@ body{
 .box-content h5,
 .box-content h6 {
     margin: 0;
-    padding: 10px 20px;
     border-bottom: 1px solid #bbb;
+    color: #555;
 }
 .box-content h1 {
     font-size: 40px;
+    padding: 10px 20px;
 }
 .box-content h2 {
     font-size: 35px;
+    padding: 8px 20px;
 }
 .box-content h3 {
     font-size: 28px;
+    padding: 8px 20px;
 }
 .box-content h4 {
     font-size: 24px;
+    padding: 6px 20px;
 }
 .box-content h5 {
     font-size: 20px;
+    padding: 6px 20px;
 }
 .box-content h6 {
     font-size: 18px;
+    padding: 4px 20px;
 }
 .quickgo-dir-link-container{
     border-bottom: 1px solid #bbb;

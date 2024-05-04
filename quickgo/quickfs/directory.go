@@ -32,6 +32,9 @@ type FSDirectory struct {
 	// Root directory.
 	root *FSDirectory
 
+	// Size of the directory.
+	size int64
+
 	// IsExcluded returns true if the directory is excluded.
 	// It should only be set on the root directory.
 	IsExcluded func(FileLike) bool
@@ -210,6 +213,19 @@ func (d *FSDirectory) AddDirectory(dirPath string) {
 
 		dir = _d
 	}
+}
+
+func (d *FSDirectory) Size() int64 {
+	if d.size > 0 {
+		return d.size
+	}
+	for el := d.Directories.Front(); el != nil; el = el.Next() {
+		d.size += el.Value.Size()
+	}
+	for el := d.Files.Front(); el != nil; el = el.Next() {
+		d.size += el.Value.Size
+	}
+	return d.size
 
 }
 

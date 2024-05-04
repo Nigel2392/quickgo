@@ -471,7 +471,8 @@ func (a *App) ReadProjectConfig(name string) (proj *config.Project, closeFiles f
 
 			zipFiles = append(zipFiles, zipF)
 
-			proj.Root.AddFile(f.Name, zipF)
+			var f = proj.Root.AddFile(f.Name, zipF)
+			f.Size = fInfo.Size()
 		}
 	}
 
@@ -730,8 +731,24 @@ func (a *App) executeServeTemplate(w http.ResponseWriter, name string, context *
 			return filepath.ToSlash(path.Join(
 				"/projects",
 				context.Project.Name,
-				strings.TrimPrefix(fl.GetPath(), "."),
+				fl.GetPath(),
 			))
+		},
+		"FileSize": func(size int64) string {
+			f_size := float64(size)
+			if f_size < 1024 {
+				return fmt.Sprintf("%d b", int(f_size))
+			}
+			f_size = f_size / 1024
+			if f_size < 1024 {
+				return fmt.Sprintf("%.1f KB", f_size)
+			}
+			f_size = f_size / 1024
+			if f_size < 1024 {
+				return fmt.Sprintf("%.1f MB", f_size)
+			}
+			f_size = f_size / 1024
+			return fmt.Sprintf("%.1f GB", f_size)
 		},
 	})
 

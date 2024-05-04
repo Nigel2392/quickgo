@@ -4,4 +4,7 @@
     {{ else }}
         <h2><a href="/">Back to Index</a></h2>
     {{ end }}
+    {{ if .Dir }}
+        <h4>./{{.Dir.GetName}}</h4>
+    {{ end }}
 {{ end }}

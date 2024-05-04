@@ -12,6 +12,9 @@ type FSFile struct {
 	// Path of the file.
 	Path string
 
+	// Size of the file.
+	Size int64
+
 	// If the file is all valid utf-8 text.
 	IsText bool
 
@@ -41,7 +44,13 @@ func NewFSFile(name, path string, root *FSDirectory) (*FSFile, error) {
 		return nil, err
 	}
 
+	fi, err := osF.Stat()
+	if err != nil {
+		return nil, err
+	}
+
 	f.Reader = osF
+	f.Size = fi.Size()
 
 	return f, nil
 }
