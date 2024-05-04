@@ -8,7 +8,8 @@ QuickGo is a simple and easy to use golang command line tool for creating projec
 
 **Support for:**
 
-- Variable usage with custom delimiters defined in `quickgo.yaml`.
+- Saving project templates for easy reuse.
+- Variable usage with custom delimiters defined in `quickgo.yaml` (uses Go's `text/template` package).
 - Custom commands ran with `quickgo <command_name> <args>` defined in `quickgo.yaml`.
 - Executing commands before and after copying project templates.
 - Excluding files from the project templates.
