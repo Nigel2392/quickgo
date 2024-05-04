@@ -4,12 +4,14 @@
     <div class="box-content">
         {{ template "parent_url" . }}
         {{ if gt (len .ObjectList) 0 }}
-            {{  range $obj := .ObjectList }}
-                <div class="quickgo-dir-link-container">
-                    <a class="quickgo-dir-link quickgo-dir" href="{{ ObjectURL $obj }}">{{$obj.GetName}}</a>
-                    {{ if $obj.Size }}<span class="quickgo-datasize">{{ FileSize $obj.Size }}</span>{{end}}
-                </div>
-            {{ end }}
+            <div class="quickgo-content-container">
+                {{  range $obj := .ObjectList }}
+                    <div class="quickgo-dir-link-container">
+                        <a class="quickgo-dir-link quickgo-dir" href="{{ ObjectURL $obj }}">{{$obj.GetName}}</a>
+                        {{ if $obj.Size }}<span class="quickgo-datasize">{{ FileSize $obj.Size }}</span>{{end}}
+                    </div>
+                {{ end }}
+            </div>
         {{ else }}
             <div style="display: flex;align-items: center;justify-content: center;height:50%;">
                 <h1 style="color:#ff5555;">Directory is empty</h1>
