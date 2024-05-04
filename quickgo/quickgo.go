@@ -70,8 +70,7 @@ func LoadApp() (*App, error) {
 		ProjectFS: os.DirFS(wd),
 		Patterns: []string{
 			"_templates/base.tmpl",
-			"_templates/readme.tmpl",
-			"_templates/index.tmpl",
+			"_templates/parent_url.tmpl",
 		},
 	}
 
@@ -243,11 +242,11 @@ func (a *App) WriteProject(proj *config.Project, directory string, raw bool) err
 
 	// Loop over all files in the project.
 	// This gets recursively called by subdirectories.
-	_, err = proj.Root.ForEach(func(fl quickfs.FileLike) (cancel bool, err error) {
+	_, err = proj.Root.Traverse(func(fl quickfs.FileLike) (cancel bool, err error) {
 		var p = fl.GetPath()
 		var b = new(bytes.Buffer)
 
-		err = a.executeTemplate(
+		err = a.executeProjectTemplate(
 			proj, b, p,
 		)
 		if err != nil {
@@ -352,7 +351,7 @@ func (a *App) WriteProjectConfig(proj *config.Project) error {
 
 	logger.Infof("Writing project files to %s", zipPath)
 
-	_, err = proj.Root.ForEach(func(fl quickfs.FileLike) (cancel bool, err error) {
+	_, err = proj.Root.Traverse(func(fl quickfs.FileLike) (cancel bool, err error) {
 		var p = fl.GetPath()
 
 		switch f := fl.(type) {
@@ -511,7 +510,7 @@ func (a *App) CopyFileContent(proj *config.Project, file *os.File, f *quickfs.FS
 		return err
 	}
 
-	return a.executeTemplate(
+	return a.executeProjectTemplate(
 		proj, file, string(content),
 	)
 }
@@ -631,10 +630,12 @@ func logServe(where string, r *http.Request) {
 }
 
 type ProjectTemplateContext struct {
-	Project *config.Project
-	File    *quickfs.FSFile
-	Dir     *quickfs.FSDirectory
-	Content string
+	Project    *config.Project
+	File       *quickfs.FSFile
+	Dir        *quickfs.FSDirectory
+	Parent     *quickfs.FSDirectory
+	ObjectList []quickfs.FileLike
+	Content    string
 }
 
 func (a *App) serveProjects(w http.ResponseWriter, r *http.Request, pathParts []string) {
@@ -667,51 +668,34 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request, pathParts []
 		return
 	}
 
+	var context = ProjectTemplateContext{
+		Project: proj,
+		Parent:  parent,
+	}
+
 	if fileLike.IsDir() {
-		// logger.Debugf("Invalid request path '%s', cannot open directory.", r.URL.Path)
-		// http.Error(w, "Invalid path", http.StatusBadRequest)
-
-		w.Header().Set("Content-Type", "text/html")
-		w.Header().Set("Cache-Control", "no-cache")
 		var dir = fileLike.(*quickfs.FSDirectory)
+		var FileObjects = make([]quickfs.FileLike, 0)
 
-		if dir.Root() != nil {
-			fmt.Fprintf(w,
-				"<a href='/%s'>../%s</a><br>",
-				path.Join(
-					"projects",
-					proj.Name,
-					parent.GetPath(),
-				),
-				parent.GetName(),
-			)
-		}
-
-		quickfs.PrintRootFn(w, dir, "&nbsp;&nbsp;", func(indent int, fl quickfs.FileLike) string {
-			var (
-				p   = fl.GetPath()
-				url = filepath.ToSlash(
-					path.Join("projects", proj.Name, p),
-				)
-				name = fl.GetName()
-			)
-
-			if !strings.HasPrefix(url, "/") {
-				url = "/" + url
-			}
-
-			return fmt.Sprintf("<a href='%s' data-indent='%d'>%s</a><br>", url, indent, name)
+		dir.ForEach(false, func(fl quickfs.FileLike) (cancel bool, err error) {
+			FileObjects = append(FileObjects, fl)
+			return false, nil
 		})
+
+		context.Dir = dir
+		context.ObjectList = FileObjects
+
+		if err = a.executeServeTemplate(w, "dir.tmpl", &context); err != nil {
+			logger.Errorf("Failed to render directory object in project '%s': %v", proj.Name, err)
+			http.Error(w, "Failed to render directory in project", http.StatusInternalServerError)
+		}
 
 		return
 	}
 
-	var (
-		tpl  *html_template.Template
-		file = fileLike.(*quickfs.FSFile)
-		b    = new(bytes.Buffer)
-	)
+	var b = new(bytes.Buffer)
 
+	var file = fileLike.(*quickfs.FSFile)
 	if _, err = io.Copy(b, file); err != nil {
 		logger.Errorf("Failed to read file '%s': %v", file.GetPath(), err)
 		http.Error(w, "Failed to read file", http.StatusInternalServerError)
@@ -729,27 +713,36 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request, pathParts []
 		return
 	}
 
-	if tpl, err = html_template.ParseFS(embedFS, a.Patterns...); err != nil {
-		logger.Errorf("Failed to parse template: %v", err)
-		http.Error(w, "Failed to parse file", http.StatusInternalServerError)
-		return
-	}
+	context.File = file
+	context.Content = content
 
-	var context = ProjectTemplateContext{
-		Project: proj,
-		File:    file,
-		Dir:     parent,
-		Content: content,
-	}
-
-	if err = tpl.ExecuteTemplate(w, "base", context); err != nil {
-		logger.Errorf("Failed to execute template: %v", err)
-		http.Error(w, "Failed to execute template", http.StatusInternalServerError)
-		return
+	if err = a.executeServeTemplate(w, "file.tmpl", &context); err != nil {
+		logger.Errorf("Failed to render file object in project '%s': %v", proj.Name, err)
+		http.Error(w, "Failed to render file in project", http.StatusInternalServerError)
 	}
 }
 
-func (a *App) executeTemplate(proj *config.Project, w io.Writer, content string) error {
+func (a *App) executeServeTemplate(w http.ResponseWriter, name string, context *ProjectTemplateContext) (err error) {
+	var tpl = html_template.New("base")
+
+	tpl = tpl.Funcs(html_template.FuncMap{
+		"ObjectURL": func(fl quickfs.FileLike) string {
+			return filepath.ToSlash(path.Join(
+				"/projects",
+				context.Project.Name,
+				strings.TrimPrefix(fl.GetPath(), "."),
+			))
+		},
+	})
+
+	if tpl, err = tpl.ParseFS(embedFS, append(a.Patterns, fmt.Sprintf("_templates/%s", name))...); err != nil {
+		return errors.Wrapf(err, "failed to parse template %s", name)
+	}
+
+	return tpl.ExecuteTemplate(w, name, context)
+}
+
+func (a *App) executeProjectTemplate(proj *config.Project, w io.Writer, content string) error {
 
 	var tpl = template.New("file")
 	tpl.Delims(

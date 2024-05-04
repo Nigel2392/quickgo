@@ -201,12 +201,6 @@ func (d *FSDirectory) AddDirectory(dirPath string) {
 	}
 
 	for _, part := range parts {
-		//if _d, ok = dir.Directories[part]; !ok {
-		//	_d = NewFSDirectory(
-		//		part, filepath.Join(dir.Path, part), root,
-		//	)
-		//	dir.Directories[part] = _d
-		//}
 		if _d, ok = dir.Directories.Get(part); !ok {
 			_d = NewFSDirectory(
 				part, filepath.Join(dir.Path, part), root,
@@ -230,12 +224,6 @@ func (d *FSDirectory) AddFile(filePath string, reader io.ReadCloser) *FSFile {
 	)
 	for i := 0; i < len(parts)-1; i++ {
 		var part = parts[i]
-		//if _, ok := dir.Directories[parts[i]]; !ok {
-		//	dir.Directories[part] = NewFSDirectory(
-		//		part, filepath.Join(dir.Path, part), d.root,
-		//	)
-		//}
-		//dir = dir.Directories[part]
 		if d, ok = dir.Directories.Get(part); !ok {
 			d = NewFSDirectory(
 				part, filepath.Join(dir.Path, part), dir.root,
@@ -256,24 +244,44 @@ func (d *FSDirectory) AddFile(filePath string, reader io.ReadCloser) *FSFile {
 	return f
 }
 
-func (d *FSDirectory) ForEach(fn func(FileLike) (cancel bool, err error)) (cancel bool, err error) {
-	cancel, err = fn(d)
-	if cancel || err != nil {
+// Traverse traverses the directory tree.
+// It will traverse into subdirectories.
+func (d *FSDirectory) Traverse(fn func(FileLike) (cancel bool, err error)) (cancel bool, err error) {
+	if cancel, err = fn(d); cancel || err != nil {
 		return
 	}
-
 	for el := d.Directories.Front(); el != nil; el = el.Next() {
-		cancel, err = el.Value.ForEach(fn)
-		if cancel || err != nil {
+		if cancel, err = el.Value.Traverse(fn); cancel || err != nil {
 			return
 		}
 	}
 	for el := d.Files.Front(); el != nil; el = el.Next() {
-		cancel, err = fn(el.Value)
-		if cancel || err != nil {
+		if cancel, err = fn(el.Value); cancel || err != nil {
+			return
+		}
+	}
+	return
+}
+
+// ForEach loops over all directories and files in this directory.
+// This will not traverse into subdirectories and is not recursive.
+func (d *FSDirectory) ForEach(execRoot bool, fn func(FileLike) (cancel bool, err error)) (cancel bool, err error) {
+	if execRoot {
+		if cancel, err = fn(d); err != nil || cancel {
 			return
 		}
 	}
 
+	for el := d.Directories.Front(); el != nil; el = el.Next() {
+		if cancel, err = fn(el.Value); err != nil || cancel {
+			return
+		}
+	}
+
+	for el := d.Files.Front(); el != nil; el = el.Next() {
+		if cancel, err = fn(el.Value); err != nil || cancel {
+			return
+		}
+	}
 	return
 }

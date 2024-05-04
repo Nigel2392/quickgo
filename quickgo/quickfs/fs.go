@@ -25,10 +25,19 @@ type (
 	Directory interface {
 		FileLike
 
+		// Find a directory by path.
 		Find(path []string) (FileLike, error)
 
-		ForEach(func(FileLike) (cancel bool, err error)) (cancel bool, err error)
+		// Traverse traverses the directory tree.
+		// It will traverse into subdirectories.
+		Traverse(fn func(FileLike) (cancel bool, err error)) (cancel bool, err error)
 
+		// ForEach loops over all directories and files in this directory.
+		// This will not traverse into subdirectories and is not recursive.
+		// execRoot will let execute the function on the directory itself if true (as well as its direct children)
+		ForEach(execRoot bool, fn func(FileLike) (cancel bool, err error)) (cancel bool, err error)
+
+		// Load loads the directory content.
 		Load() error
 	}
 

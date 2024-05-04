@@ -60,7 +60,7 @@ var FileTree = &quickfs.FSDirectory{
 
 func TestForEach(t *testing.T) {
 	var count int
-	FileTree.ForEach(func(fl quickfs.FileLike) (cancel bool, err error) {
+	FileTree.Traverse(func(fl quickfs.FileLike) (cancel bool, err error) {
 		t.Logf("file: %s", fl.GetPath())
 		count++
 		return
@@ -138,7 +138,7 @@ func TestAddDirectories(t *testing.T) {
 	}
 
 	var count int
-	newRoot.ForEach(func(fl quickfs.FileLike) (cancel bool, err error) {
+	newRoot.Traverse(func(fl quickfs.FileLike) (cancel bool, err error) {
 		t.Logf("dir: %s", fl.GetPath())
 		count++
 		return
@@ -209,7 +209,7 @@ func TestAddFiles(t *testing.T) {
 	}
 
 	var count int
-	newRoot.ForEach(func(fl quickfs.FileLike) (cancel bool, err error) {
+	newRoot.Traverse(func(fl quickfs.FileLike) (cancel bool, err error) {
 		t.Logf("file: %s", fl.GetPath())
 		count++
 		return

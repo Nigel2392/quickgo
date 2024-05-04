@@ -1,0 +1,7 @@
+{{ define "parent_url" }}
+    {{ if .Parent }}
+        <h2><a href="{{ ObjectURL .Parent }}">../{{.Parent.GetName}}</a></h2>
+    {{ else }}
+        <h2><a href="/">Back to Index</a></h2>
+    {{ end }}
+{{ end }}

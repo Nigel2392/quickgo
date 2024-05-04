@@ -230,6 +230,10 @@ func main() {
 
 		qg.ProjectConfig.Name = flagger.Import
 
+		if err = qg.ProjectConfig.Validate(); err != nil {
+			logger.Fatal(1, fmt.Errorf("failed to validate project config: %w", err))
+		}
+
 		err = qg.WriteProjectConfig(qg.ProjectConfig)
 		if err != nil {
 			logger.Fatal(1, fmt.Errorf("failed to write project config: %w", err))

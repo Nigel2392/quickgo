@@ -1,0 +1,18 @@
+{{template "base" .}}
+
+{{define "content"}}
+    <div class="box-content">
+        {{ template "parent_url" . }}
+        {{ if gt (len .ObjectList) 0 }}
+            {{  range $obj := .ObjectList }}
+                <div class="quickgo-dir-link-container">
+                    <a class="quickgo-dir-link quickgo-dir" href="{{ ObjectURL $obj }}">{{$obj.GetName}}</a>
+                </div>
+            {{ end }}
+        {{ else }}
+            <div style="display: flex;align-items: center;justify-content: center;height:50%;">
+                <h1 style="color:#ff5555;">Directory is empty</h1>
+            </div>
+        {{ end }}
+    </div>
+{{end}}
