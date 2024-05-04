@@ -1,5 +1,5 @@
 <center>
-    <img src="https://github.com/Nigel2392/quickgo/blob/main/.github/assets/quickgo.png?raw=true" alt="QuickGo Logo"/>
+    <img src="https://github.com/Nigel2392/quickgo/blob/main/v2/_templates/static/quickgo.png?raw=true" alt="QuickGo Logo"/>
 </center>
 
 # Why QuickGo?
