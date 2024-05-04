@@ -200,6 +200,10 @@ func main() {
 	switch {
 	case flagger.Import != "":
 
+		if flagger.TargetDir == "" {
+			flagger.TargetDir = "."
+		}
+
 		err = qg.LoadProjectConfig(flagger.TargetDir)
 		if err != nil {
 			logger.Fatal(1, err)
