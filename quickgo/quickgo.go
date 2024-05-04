@@ -28,7 +28,7 @@ type (
 		Config        *config.QuickGo `yaml:"config"`        // The configuration for QuickGo.
 		ProjectConfig *config.Project `yaml:"projectConfig"` // The configuration for the project.
 		Patterns      []string        `yaml:"patterns"`      // The patterns for the templates.
-		AppFS         fs.FS           `yaml:"-"`             // The file system for the app, resides in the executable directory.
+		AppFS         fs.FS           `yaml:"-"`             // The file system for the app, resides in the userprofile home directory.
 		ProjectFS     fs.FS           `yaml:"-"`             // The file system for the project, resides in the project (working) directory.
 	}
 )
@@ -44,8 +44,8 @@ func LoadApp() (*App, error) {
 	}
 
 	// Check for the application config directory.
-	var quickGoDir = filepath.Join(executableDir, config.QUICKGO_DIR)
-	var projectDir = filepath.Join(executableDir, config.QUICKGO_DIR, "projects")
+	var quickGoDir = GetQuickGoPath()
+	var projectDir = GetQuickGoPath("projects")
 	_, err = os.Stat(projectDir)
 
 	// Create the application config directory if it does not exist.
@@ -75,10 +75,7 @@ func LoadApp() (*App, error) {
 	cliApplication = app
 
 	// Load the QuickGo configuration.
-	var configPath = filepath.Join(
-		executableDir, config.QUICKGO_DIR, config.QUICKGO_CONFIG_NAME,
-	)
-
+	var configPath = GetQuickGoPath(config.QUICKGO_CONFIG_NAME)
 	cfg, err := config.LoadYamlFS[config.QuickGo](
 		app.AppFS,
 		config.QUICKGO_CONFIG_NAME,
@@ -314,7 +311,7 @@ func (a *App) WriteProjectConfig(proj *config.Project) error {
 	var (
 		err     error
 		file    *os.File
-		dirPath = getProjectFilePath(proj.Name, true)
+		dirPath = GetProjectDirectoryPath(proj.Name, true)
 	)
 
 	var path = filepath.Join(dirPath, config.PROJECT_CONFIG_NAME)
@@ -328,7 +325,6 @@ func (a *App) WriteProjectConfig(proj *config.Project) error {
 		if err = hook(a, proj); err != nil {
 			return err
 		}
-
 	}
 
 	err = config.WriteYaml(proj, path)
@@ -402,7 +398,7 @@ func (a *App) ReadProjectConfig(name string) (proj *config.Project, closeFiles f
 		file *os.File
 		// dirPath    = getProjectFilePath(name, false)
 		// absDirPath = getProjectFilePath(name, true)
-		absDirPath = a.GetProjectDirectoryPath(name)
+		absDirPath = GetProjectDirectoryPath(name, true)
 	)
 	proj, err = config.LoadYaml[config.Project](
 		path.Join(absDirPath, config.PROJECT_CONFIG_NAME),
@@ -483,10 +479,6 @@ func (a *App) ReadProjectConfig(name string) (proj *config.Project, closeFiles f
 	return proj, closeFiles, nil
 }
 
-func (a *App) GetProjectDirectoryPath(name string) string {
-	return getProjectFilePath(name, true)
-}
-
 func (a *App) CopyFileContent(proj *config.Project, file *os.File, f *quickfs.FSFile, raw bool) error {
 
 	if raw {
@@ -521,7 +513,7 @@ func (a *App) CopyFileContent(proj *config.Project, file *os.File, f *quickfs.FS
 func (a *App) ListProjectObjects() ([]*config.Project, error) {
 	var (
 		projects = make([]*config.Project, 0)
-		dirPath  = getProjectFilePath("", true)
+		dirPath  = GetProjectDirectoryPath("", true)
 	)
 
 	dir, err := os.ReadDir(dirPath)
@@ -570,13 +562,11 @@ func (a *App) ListProjects() ([]string, error) {
 }
 
 func (a *App) WriteFile(data []byte, path string) error {
-	path = filepath.Join(executableDir, config.QUICKGO_DIR, path)
-	return os.WriteFile(path, data, os.ModePerm)
+	return os.WriteFile(GetProjectDirectoryPath(path, true), data, os.ModePerm)
 }
 
 func (a *App) ReadFile(path string) ([]byte, error) {
-	path = filepath.Join(executableDir, config.QUICKGO_DIR, path)
-	return os.ReadFile(path)
+	return os.ReadFile(GetProjectDirectoryPath(path, true))
 }
 
 func (a *App) executeProjectTemplate(proj *config.Project, w io.Writer, content string) error {
@@ -602,20 +592,27 @@ func (a *App) executeProjectTemplate(proj *config.Project, w io.Writer, content 
 	)
 }
 
-func getProjectFilePath(name string, absolute bool) string {
+func GetQuickGoPath(p ...string) string {
+	if len(p) == 0 {
+		p = []string{quickGoConfigDir, config.QUICKGO_DIR}
+	} else {
+		p = append([]string{quickGoConfigDir, config.QUICKGO_DIR}, p...)
+	}
+	return filepath.ToSlash(filepath.Join(p...))
+}
+
+func GetProjectDirectoryPath(name string, absolute bool) string {
 	var p string
 	if absolute {
-		p = path.Join(
-			executableDir,
-			config.QUICKGO_DIR,
+		p = filepath.ToSlash(GetQuickGoPath(
 			"projects",
 			name,
-		)
+		))
 	} else {
-		p = path.Join(
+		p = filepath.ToSlash(filepath.Join(
 			"projects",
 			name,
-		)
+		))
 	}
 
 	return strings.ReplaceAll(p, "\\", "/")

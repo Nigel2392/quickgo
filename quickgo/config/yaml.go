@@ -62,10 +62,12 @@ func WriteYaml(data interface{}, path string) error {
 		dir = filepath.Dir(path)
 	)
 
-	if _, err = os.Stat(dir); os.IsNotExist(err) {
+	if _, err = os.Stat(dir); err != nil && os.IsNotExist(err) {
 		if err = os.MkdirAll(dir, 0755); err != nil {
 			return err
 		}
+	} else if err != nil {
+		return err
 	}
 
 	return os.WriteFile(

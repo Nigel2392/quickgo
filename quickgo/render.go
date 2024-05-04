@@ -11,6 +11,7 @@ import (
 const (
 	CMD_Blue          = "\033[34m"
 	CMD_Cyan          = "\033[36m"
+	CMD_Green         = "\033[32m"
 	CMD_BRIGHT_Purple = "\033[35;1m"
 	CMD_Purple        = "\033[35m"
 	CMD_Red           = "\033[31m"
@@ -77,7 +78,7 @@ func ColoredLogWrapper(l logger.LogLevel, s string) string {
 }
 
 var logWrapperMap = map[logger.LogLevel]func(l logger.LogLevel, s string) string{
-	logger.DebugLevel: wrapLog(CMD_BRIGHT_Purple),
+	logger.DebugLevel: wrapLog(CMD_Green),
 	logger.InfoLevel:  wrapLog(CMD_Cyan),
 	logger.WarnLevel:  wrapLog(CMD_Yellow),
 	logger.ErrorLevel: wrapLog(CMD_Red, CMD_Bold),

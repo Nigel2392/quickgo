@@ -48,18 +48,24 @@ func (a *App) HttpHandler() http.Handler {
 			"/projects/",
 			http.HandlerFunc(a.serveProjects),
 		),
-		Where: "root",
+		Where: "projects",
+		Level: logger.InfoLevel,
+	})
+	mux.Handle("/config/", &LogHandler{
+		Handler: http.StripPrefix(
+			"/config/",
+			http.HandlerFunc(a.serveProjectConfig),
+		),
+		Where: "project config",
 		Level: logger.InfoLevel,
 	})
 	mux.Handle("/static/", &LogHandler{
 		Handler: http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))),
 		Where:   "static files",
-		Level:   logger.DebugLevel,
 	})
 	mux.Handle("/favicon.ico", &LogHandler{
 		Handler: http.HandlerFunc(a.serveFavicon),
 		Where:   "favicon",
-		Level:   logger.DebugLevel,
 	})
 	return a.middleware(mux)
 }
@@ -96,7 +102,7 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request) {
 
 		var (
 			projName   = pathParts[0]
-			projPath   = a.GetProjectDirectoryPath(projName)
+			projPath   = GetProjectDirectoryPath(projName, true)
 			configFile = filepath.Join(projPath, config.PROJECT_CONFIG_NAME)
 			projectZip = filepath.Join(projPath, config.PROJECT_ZIP_NAME)
 		)
@@ -107,12 +113,14 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request) {
 		var zf = zip.NewWriter(w)
 		defer zf.Close()
 
+		logger.Debugf("Adding '%s' to zip for export", configFile)
 		if err = copyToZipfile(zf, config.PROJECT_CONFIG_NAME, configFile); err != nil {
 			logger.Errorf("Failed to copy '%s' to zip: %v", configFile, err)
 			http.Error(w, "Failed to copy to zip", http.StatusInternalServerError)
 			return
 		}
 
+		logger.Debugf("Adding '%s' to zip for export", projectZip)
 		if err = copyToZipfile(zf, config.PROJECT_ZIP_NAME, projectZip); err != nil {
 			logger.Errorf("Failed to copy '%s' to zip: %v", projectZip, err)
 			http.Error(w, "Failed to copy to zip", http.StatusInternalServerError)
@@ -190,6 +198,37 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request) {
 	if err = a.executeServeTemplate(w, "file.tmpl", &context); err != nil {
 		logger.Errorf("Failed to render file object in project '%s': %v", proj.Name, err)
 		http.Error(w, "Failed to render file in project", http.StatusInternalServerError)
+	}
+}
+
+func (a *App) serveProjectConfig(w http.ResponseWriter, r *http.Request) {
+	var pathParts = strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(pathParts) != 1 {
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+
+	var configFile, err = os.ReadFile(
+		GetProjectDirectoryPath(path.Join(pathParts[0], config.PROJECT_CONFIG_NAME), true),
+	)
+	if err != nil {
+		logger.Errorf("Failed to open project '%s': %v", pathParts[0], err)
+		http.Error(w, "Failed to open project", http.StatusInternalServerError)
+		return
+	}
+
+	var ctx = &ProjectTemplateContext{
+		// Fake for breadcrumbs
+		Dir: &quickfs.FSDirectory{
+			Name: pathParts[0],
+		},
+		// Config YAML data
+		Content: string(configFile),
+	}
+
+	if err = a.executeServeTemplate(w, "file.tmpl", ctx); err != nil {
+		logger.Errorf("Failed to render project config: %v", err)
+		http.Error(w, "Failed to render project config", http.StatusInternalServerError)
 	}
 }
 
@@ -278,6 +317,12 @@ func (a *App) executeServeTemplate(w http.ResponseWriter, name string, context *
 		"ProjectURL": func(project *config.Project) string {
 			return filepath.ToSlash(path.Join(
 				"/projects",
+				project.Name,
+			))
+		},
+		"ConfigURL": func(project *config.Project) string {
+			return filepath.ToSlash(path.Join(
+				"/config",
 				project.Name,
 			))
 		},

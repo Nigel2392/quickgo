@@ -5,13 +5,12 @@ import (
 	"encoding/gob"
 	"io/fs"
 	"os"
-	"path/filepath"
 
 	"github.com/pkg/errors"
 )
 
 var (
-	executableDir string
+	quickGoConfigDir string
 
 	//go:embed _templates
 	embedFS embed.FS
@@ -20,12 +19,11 @@ var (
 )
 
 func init() {
-	var executable, err = os.Executable()
+	var err error
+	quickGoConfigDir, err = os.UserHomeDir()
 	if err != nil {
 		panic(err)
 	}
-
-	executableDir = filepath.Dir(executable)
 
 	gob.Register(&App{})
 
