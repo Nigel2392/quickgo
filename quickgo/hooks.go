@@ -14,7 +14,7 @@ type (
 	AppServeHook func(*App, http.ResponseWriter, *http.Request) (written bool, err error)
 
 	// quickgo.funcs.listProjects
-	AppListProjectsHook func(*App, []string) ([]string, error)
+	AppListProjectsHook func(*App, []*config.Project) ([]*config.Project, error)
 
 	// quickgo.project.loaded
 	// quickgo.project.example

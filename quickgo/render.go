@@ -40,14 +40,14 @@ func PrintLogo() {
 		Craft(CMD_Blue, "$$ \033[31m/\033[34m  $$ |$$\\   $$\\ $$\\  $$$$$$$\\ $$ |  $$\\ "+Craft(CMD_Cyan, "   $$ /  \\__| $$$$$$\\   ####\n")) +
 		Craft(CMD_Blue, "$$ \033[31m|\033[34m  $$ |$$ |  $$ |$$ |$$  \033[31m_____|\033[34m$$ | $$  \033[31m|\033[34m  "+Craft(CMD_Cyan, " $$ |$$$$\\ $$  __$$\\\n")) +
 		Craft(CMD_Blue, "$$ \033[31m|\033[34m  $$ |$$ |  $$ |$$ |$$ \033[31m/\033[34m      $$$$$$  \033[31m/\033[34m   "+Craft(CMD_Cyan, " $$ |\\_$$ |$$ /  $$ |   ######\n")) +
-		Craft(CMD_Purple, "$$ $$\\$$ |$$ |  $$ |$$ |$$ |      $$  _$$<   "+Craft(CMD_Cyan, "  $$ |  $$ |$$ |  $$ |\n")) +
+		Craft(CMD_Purple, "$$ $$\\$$ |$$ |  $$ |$$ |$$ \033[31m|\033[35m      $$  _$$<   "+Craft(CMD_Cyan, "  $$ |  $$ |$$ |  $$ |\n")) +
 		Craft(CMD_Purple, "\\$$$$$$ / \\$$$$$$  |$$ |\\$$$$$$$\\ $$ | \\$$\\   "+Craft(CMD_Cyan, " \\$$$$$$  |\\$$$$$$  | #####\n")) +
 		Craft(CMD_Red, " \\___"+CMD_Reset+Craft(CMD_Purple, "$$$")+Craft(CMD_Red, "\\  \\______/ \\__| \\_______|\\__|  \\__| ")+Craft(CMD_Cyan, "   \\______/  \\______/\n")) +
-		Craft(CMD_Red, "     \\___|                                         "+Craft(CMD_Cyan, "                \n"))
+		Craft(CMD_Red, "     \\___|")
 	fmt.Println(str)
 	fmt.Println(Craft(CMD_Red, "\nCreated by: ") + Craft(CMD_Purple, "Nigel van Keulen"))
-	var info, ok = debug.ReadBuildInfo()
-	if ok && info.Main.Version != "" {
+
+	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" {
 		fmt.Printf(Craft(CMD_Cyan, "Version: %s\n"), info.Main.Version)
 	}
 

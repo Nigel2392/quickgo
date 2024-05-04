@@ -516,9 +516,9 @@ func (a *App) CopyFileContent(proj *config.Project, file *os.File, f *quickfs.FS
 	)
 }
 
-func (a *App) ListProjects() ([]string, error) {
+func (a *App) ListProjectObjects() ([]*config.Project, error) {
 	var (
-		projects = make([]string, 0)
+		projects = make([]*config.Project, 0)
 		dirPath  = getProjectFilePath("", true)
 	)
 
@@ -534,11 +534,12 @@ func (a *App) ListProjects() ([]string, error) {
 
 		var path = filepath.Join(dirPath, d.Name())
 		var configName = filepath.Join(path, config.PROJECT_CONFIG_NAME)
-		if _, err = os.Stat(configName); err != nil {
-			continue
+		proj, err := config.LoadYaml[config.Project](configName)
+		if err != nil && !os.IsNotExist(err) {
+			return nil, errors.Wrapf(err, "failed to load project config %s", configName)
 		}
 
-		projects = append(projects, d.Name())
+		projects = append(projects, proj)
 	}
 
 	for _, hook := range goldcrest.Get[AppListProjectsHook](HookQuickGoListProjects) {
@@ -554,6 +555,18 @@ func (a *App) ListProjects() ([]string, error) {
 	return projects, nil
 }
 
+func (a *App) ListProjects() ([]string, error) {
+	var p, err = a.ListProjectObjects()
+	if err != nil {
+		return nil, err
+	}
+	var names = make([]string, 0, len(p))
+	for _, proj := range p {
+		names = append(names, proj.Name)
+	}
+	return names, nil
+}
+
 func (a *App) WriteFile(data []byte, path string) error {
 	path = filepath.Join(executableDir, config.QUICKGO_DIR, path)
 	return os.WriteFile(path, data, os.ModePerm)
@@ -564,82 +577,54 @@ func (a *App) ReadFile(path string) ([]byte, error) {
 	return os.ReadFile(path)
 }
 
-func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (a *App) HttpHandler() http.Handler {
+	var mux = http.NewServeMux()
+	mux.Handle("/", &LogHandler{
+		Handler: http.HandlerFunc(a.serveIndex),
+		Where:   "index",
+		Level:   logger.InfoLevel,
+	})
+	mux.Handle("/projects/", &LogHandler{
+		Handler: http.StripPrefix(
+			"/projects/",
+			http.HandlerFunc(a.serveProjects),
+		),
+		Where: "root",
+		Level: logger.InfoLevel,
+	})
+	mux.Handle("/static/", &LogHandler{
+		Handler: http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))),
+		Where:   "static files",
+		Level:   logger.DebugLevel,
+	})
+	mux.Handle("/favicon.ico", &LogHandler{
+		Handler: http.HandlerFunc(a.serveFavicon),
+		Where:   "favicon",
+		Level:   logger.DebugLevel,
+	})
+	return a.middleware(mux)
+}
 
-	go func() {
-		if err := recover(); err != nil {
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-		}
-	}()
+func (a *App) serveIndex(w http.ResponseWriter, r *http.Request) {
 
-	var pathParts = strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	var primary = strings.ToLower(pathParts[0])
-
-	for _, hook := range goldcrest.Get[AppServeHook](HookQuickGoServer) {
-		if served, err := hook(a, w, r); err != nil {
-			logger.Errorf("Failed to serve: %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		} else if served {
-			logger.Debugf("'%s' was served and hijacked by a hook", r.URL.Path)
-			return
-		}
+	var projects, err = a.ListProjectObjects()
+	if err != nil {
+		logger.Errorf("Failed to list projects: %v", err)
+		http.Error(w, "Failed to list projects", http.StatusInternalServerError)
+		return
 	}
 
-	switch {
-	case primary == "projects":
+	var ctx = &ProjectTemplateContext{
+		ObjectList: projects,
+	}
 
-		logServe("projects", r)
-		a.serveProjects(w, r, pathParts[1:])
-
-	case primary == "favicon.ico" && len(pathParts) == 1:
-
-		// Write out the favicon file.
-		// No need to log the happy path here, quite boring.
-		var f, err = staticFS.Open("quickgo.png")
-		if err != nil {
-			logger.Errorf("Failed to open 'quickgo.png': %v", err)
-			http.Error(w, "Failed to open 'quickgo.png'", http.StatusInternalServerError)
-			return
-		}
-		defer f.Close()
-
-		w.Header().Set("Content-Type", "image/x-icon")
-		if _, err = io.Copy(w, f); err != nil {
-			logger.Errorf("Failed to read 'quickgo.png': %v", err)
-			http.Error(w, "Failed to read 'quickgo.png'", http.StatusInternalServerError)
-		}
-
-	case primary == "static":
-
-		// Serve static files.
-		logServe("static file", r)
-		// Serve from embedded file system.
-		var handler = http.FileServer(http.FS(staticFS))
-		handler = http.StripPrefix("/static/", handler)
-		handler.ServeHTTP(w, r)
-
-	default:
-
-		logger.Debugf("Invalid request path '%s'", r.URL.Path)
-		http.Error(w, "Invalid path", http.StatusBadRequest)
+	if err = a.executeServeTemplate(w, "index.tmpl", ctx); err != nil {
+		logger.Errorf("Failed to render index: %v", err)
+		http.Error(w, "Failed to render index", http.StatusInternalServerError)
 	}
 }
 
-func logServe(where string, r *http.Request) {
-	logger.Debugf("Serving %s to %s on path '%s'", where, r.RemoteAddr, r.URL.Path)
-}
-
-type ProjectTemplateContext struct {
-	Project    *config.Project
-	File       *quickfs.FSFile
-	Dir        *quickfs.FSDirectory
-	Parent     *quickfs.FSDirectory
-	ObjectList []quickfs.FileLike
-	Content    string
-}
-
-func (a *App) serveProjects(w http.ResponseWriter, r *http.Request, pathParts []string) {
+func (a *App) serveProjects(w http.ResponseWriter, r *http.Request) {
 	var (
 		proj     *config.Project
 		parent   *quickfs.FSDirectory
@@ -647,11 +632,7 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request, pathParts []
 		err      error
 	)
 
-	if len(pathParts) == 0 {
-		logger.Errorf("Invalid request path '%s'", r.URL.Path)
-		http.Error(w, "Invalid path", http.StatusBadRequest)
-		return
-	}
+	var pathParts = strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 
 	proj, closeFiles, err := a.ReadProjectConfig(pathParts[0])
 	if err != nil {
@@ -723,6 +704,77 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request, pathParts []
 	}
 }
 
+func (a *App) serveFavicon(w http.ResponseWriter, r *http.Request) {
+	// Write out the favicon file.
+	// No need to log the happy path here, quite boring.
+	var f, err = staticFS.Open("quickgo.png")
+	if err != nil {
+		logger.Errorf("Failed to open 'quickgo.png': %v", err)
+		http.Error(w, "Failed to open 'quickgo.png'", http.StatusInternalServerError)
+		return
+	}
+	defer f.Close()
+
+	w.Header().Set("Content-Type", "image/x-icon")
+	if _, err = io.Copy(w, f); err != nil {
+		logger.Errorf("Failed to read 'quickgo.png': %v", err)
+		http.Error(w, "Failed to read 'quickgo.png'", http.StatusInternalServerError)
+	}
+}
+
+func (a *App) middleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+			}
+		}()
+
+		for _, hook := range goldcrest.Get[AppServeHook](HookQuickGoServer) {
+			if served, err := hook(a, w, r); err != nil {
+				logger.Errorf("Failed to serve: %v", err)
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				return
+			} else if served {
+				logger.Debugf("'%s' was served and hijacked by a hook", r.URL.Path)
+				return
+			}
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+type LogHandler struct {
+	Handler http.Handler
+	Level   logger.LogLevel
+	Where   string
+}
+
+func (h *LogHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	var s = fmt.Sprintf("Serving %s to %s on path '%s'", h.Where, r.RemoteAddr, r.URL.Path)
+	switch h.Level {
+	case logger.DebugLevel:
+		logger.Debug(s)
+	case logger.InfoLevel:
+		logger.Info(s)
+	case logger.WarnLevel:
+		logger.Warn(s)
+	case logger.ErrorLevel:
+		logger.Error(s)
+	}
+	h.Handler.ServeHTTP(w, r)
+}
+
+type ProjectTemplateContext struct {
+	Project    *config.Project
+	File       *quickfs.FSFile
+	Dir        *quickfs.FSDirectory
+	Parent     *quickfs.FSDirectory
+	ObjectList any
+	Content    string
+}
+
 func (a *App) executeServeTemplate(w http.ResponseWriter, name string, context *ProjectTemplateContext) (err error) {
 	var tpl = html_template.New("base")
 
@@ -732,6 +784,12 @@ func (a *App) executeServeTemplate(w http.ResponseWriter, name string, context *
 				"/projects",
 				context.Project.Name,
 				fl.GetPath(),
+			))
+		},
+		"ProjectURL": func(project *config.Project) string {
+			return filepath.ToSlash(path.Join(
+				"/projects",
+				project.Name,
 			))
 		},
 		"FileSize": func(size int64) string {

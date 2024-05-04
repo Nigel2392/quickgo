@@ -8,4 +8,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require github.com/elliotchance/orderedmap/v2 v2.2.0 // indirect
+require (
+	github.com/Nigel2392/mux v1.2.4 // indirect
+	github.com/elliotchance/orderedmap/v2 v2.2.0 // indirect
+)

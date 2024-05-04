@@ -329,7 +329,7 @@ func main() {
 		)
 		var server = &http.Server{
 			Addr:    addr,
-			Handler: qg,
+			Handler: qg.HttpHandler(),
 		}
 
 		if qg.Config.TLSKey != "" && qg.Config.TLSCert != "" {

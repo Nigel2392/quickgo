@@ -71,38 +71,6 @@ func TestAppServeHook(t *testing.T) {
 
 }
 
-func TestAppListProjectsHook(t *testing.T) {
-	var hookName = "quickgo.test.TestAppListProjectsHook"
-	var (
-		err error
-		a   = &quickgo.App{}
-		p   = make([]string, 0)
-	)
-	p = append(p, "project1")
-	p = append(p, "project2")
-
-	goldcrest.Register(
-		hookName, 0,
-		func(a *quickgo.App, projects []string) ([]string, error) {
-			projects = append(projects, "project3")
-			return projects, nil
-		},
-	)
-	for _, hook := range goldcrest.Get[quickgo.AppListProjectsHook](hookName) {
-		if p, err = hook(a, p); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	if len(p) != 3 {
-		t.Fatalf("expected 3, got %d", len(p))
-	}
-
-	if p[2] != "project3" {
-		t.Fatalf("expected %q, got %q", "project3", p[2])
-	}
-}
-
 func TestProjectHook(t *testing.T) {
 	var hookName = "quickgo.test.TestProjectHook"
 

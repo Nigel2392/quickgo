@@ -2,7 +2,11 @@
 
 {{define "content"}}
     <div class="box-content">
-        <h2>Index: {{.Dir.GetName}}</h2>
-        <pre class="quickgo-content-container">{{.Content}}</pre>
+        <h2>View all projects:</h2>
+        <ul>
+            {{ range $project := .ObjectList }}
+                <li><a href="{{ ProjectURL $project }}">{{$project.Name}}</a></li>
+            {{ end }}
+        </ul>
     </div>
 {{end}}
