@@ -182,7 +182,7 @@ body{
   color: #650707;
   padding: 10px;
   font-size: 14px;
-  line-height: 16px;
+  line-height: 1.3;
 }
 .quickgo-dir-link-container{
     border-bottom: 1px solid #bbb;
