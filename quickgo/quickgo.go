@@ -15,9 +15,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/Nigel2392/quickgo/v2/v2/config"
-	"github.com/Nigel2392/quickgo/v2/v2/logger"
-	"github.com/Nigel2392/quickgo/v2/v2/quickfs"
+	"github.com/Nigel2392/quickgo/v2/quickgo/config"
+	"github.com/Nigel2392/quickgo/v2/quickgo/logger"
+	"github.com/Nigel2392/quickgo/v2/quickgo/quickfs"
 	"github.com/pkg/errors"
 )
 

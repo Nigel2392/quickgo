@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Nigel2392/quickgo/v2/v2/quickfs"
+	"github.com/Nigel2392/quickgo/v2/quickgo/quickfs"
 )
 
 func makeFiles(path string, count int) map[string]quickfs.File {
