@@ -1,6 +1,6 @@
 module github.com/Nigel2392/quickgo/v2
 
-go 1.21.6
+go 1.22.2
 
 require (
 	github.com/Nigel2392/goldcrest v1.0.4

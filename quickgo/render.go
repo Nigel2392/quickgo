@@ -36,13 +36,16 @@ func PrintLogo() {
 		Craft(CMD_Red, " \\___"+CMD_Reset+Craft(CMD_Purple, "$$$")+Craft(CMD_Red, "\\  \\______/ \\__| \\_______|\\__|  \\__| ")+Craft(CMD_Cyan, "   \\______/  \\______/\n")) +
 		Craft(CMD_Red, "     \\___|                                         "+Craft(CMD_Cyan, "                \n"))
 	fmt.Println(str)
-
+	fmt.Println(Craft(CMD_Red, "\nCreated by: ") + Craft(CMD_Purple, "Nigel van Keulen"))
 	var info, ok = debug.ReadBuildInfo()
-	if ok {
+	if ok && info.Main.Version != "" {
 		fmt.Printf(Craft(CMD_Cyan, "Version: %s\n"), info.Main.Version)
 	}
 
-	fmt.Println(Craft(CMD_Red, "\nCreated by: ") + Craft(CMD_Purple, "Nigel van Keulen"))
+	// Example:
+	// QUICKGO (but very big)
+	// Created by: Nigel van Keulen
+	// Version: vX.X.X
 }
 
 func wrapLog(colors ...string) func(l logger.LogLevel, s string) string {
