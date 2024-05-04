@@ -1,6 +1,7 @@
 package config
 
 import (
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -9,31 +10,30 @@ import (
 )
 
 func LoadYamlFS[T any](fileSys fs.FS, path string) (*T, error) {
-	var (
-		data   = new(T)
-		f, err = fs.ReadFile(fileSys, path)
-	)
+	var f, err = fileSys.Open(path)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = yaml.Unmarshal(f, data); err != nil {
-		return nil, err
-	}
-
-	return data, nil
+	return ReadYaml[T](f)
 }
 
 func LoadYaml[T any](path string) (*T, error) {
-	var (
-		data   = new(T)
-		f, err = os.ReadFile(path)
-	)
+	var f, err = os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = yaml.Unmarshal(f, data); err != nil {
+	return ReadYaml[T](f)
+}
+
+func ReadYaml[T any](r io.Reader) (*T, error) {
+	var (
+		data    = new(T)
+		decoder = yaml.NewDecoder(r)
+		err     error
+	)
+	if err = decoder.Decode(data); err != nil {
 		return nil, err
 	}
 

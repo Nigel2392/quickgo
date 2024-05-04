@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	quickgo "github.com/Nigel2392/quickgo/v2/quickgo"
@@ -28,9 +29,6 @@ type Flagger struct {
 
 	// The target directory to write the project to.
 	TargetDir string
-
-	// Log verbose output
-	Verbose bool
 
 	// Used to pass in the quickgo template
 	Import string
@@ -105,6 +103,13 @@ func main() {
 		qg      *quickgo.App
 	)
 
+	logger.Setup(&logger.Logger{
+		Level:      logger.InfoLevel,
+		Output:     os.Stdout,
+		Prefix:     "quickgo",
+		WrapPrefix: quickgo.ColoredLogWrapper,
+	})
+
 	flagSet.StringVar(&flagger.Project.Name, "name", "", "The name of the project.")
 	flagSet.StringVar(&flagger.Project.DelimLeft, "delim-left", "", "The left delimiter for the project templates.")
 	flagSet.StringVar(&flagger.Project.DelimRight, "delim-right", "", "The right delimiter for the project templates.")
@@ -121,7 +126,7 @@ func main() {
 	flagSet.BoolVar(&flagger.Example, "example", false, "Print an example project configuration.")
 	flagSet.BoolVar(&flagger.ListProjects, "list", false, "List the projects available for use.")
 	flagSet.BoolVar(&flagger.Serve, "serve", false, "Serve the project over HTTP.")
-	flagSet.BoolVar(&flagger.Verbose, "v", false, "Enable verbose logging.")
+	flagSet.BoolFunc("v", "Enable verbose logging.", enableVerboseLogging)
 
 	flagSet.Usage = func() {
 		fmt.Println(quickgo.Craft(quickgo.CMD_Cyan, "QuickGo: A simple project generator and server."))
@@ -168,23 +173,12 @@ func main() {
 		}
 	}
 
-	err = flagSet.Parse(os.Args[1:])
-	if err != nil {
-		logger.Fatal(1, err)
-	}
-
-	logger.Setup(&logger.Logger{
-		Level:      logger.InfoLevel,
-		Output:     os.Stdout,
-		Prefix:     "quickgo",
-		WrapPrefix: quickgo.ColoredLogWrapper,
-	})
-
-	if flagger.Verbose {
-		logger.SetLevel(logger.DebugLevel)
-	}
-
 	quickgo.PrintLogo()
+
+	if len(os.Args) < 2 {
+		logger.Fatal(1, "no command provided, run 'quickgo -h' for more information.")
+		os.Exit(1)
+	}
 
 	// Initially load the application.
 	qg, err = quickgo.LoadApp()
@@ -192,9 +186,9 @@ func main() {
 		logger.Fatal(1, err)
 	}
 
-	if len(os.Args) < 2 {
-		flagSet.Usage()
-		os.Exit(1)
+	err = flagSet.Parse(os.Args[1:])
+	if err != nil {
+		logger.Fatal(1, err)
 	}
 
 	switch {
@@ -262,6 +256,10 @@ func main() {
 		flagger.CopyProject(
 			example,
 		)
+
+		if err = config.IsLocked(flagger.TargetDir); err != nil {
+			logger.Fatal(1, err)
+		}
 
 		if s, err := os.Stat(filepath.Join(flagger.TargetDir, config.PROJECT_CONFIG_NAME)); err == nil {
 			var abs, _ = filepath.Abs(s.Name())
@@ -363,6 +361,21 @@ func main() {
 			logger.Fatal(1, fmt.Errorf("failed to execute command: %w", err))
 		}
 	}
+}
+
+func enableVerboseLogging(b string) error {
+	var boolVal, err = strconv.ParseBool(b)
+	if err != nil {
+		return err
+	}
+
+	if boolVal {
+		logger.SetLevel(logger.DebugLevel)
+	} else {
+		logger.SetLevel(logger.InfoLevel)
+	}
+
+	return nil
 }
 
 func parseCommandlineContext(args []string, parseCtxImmediately bool) map[string]any {

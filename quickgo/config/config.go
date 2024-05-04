@@ -39,7 +39,7 @@ func IsLocked(path string) error {
 	var lockfile = filepath.Join(path, LOCKFILE_NAME)
 	var _, err = os.Stat(lockfile)
 	if err == nil {
-		return errors.Errorf("project is locked: %s", path)
+		return errors.Errorf("project is locked: '%s'", lockfile)
 	}
 	return nil
 }
