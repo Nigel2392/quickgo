@@ -1,8 +1,9 @@
 module github.com/Nigel2392/quickgo/v2
 
-go 1.21
+go 1.21.6
 
 require (
+	github.com/Nigel2392/goldcrest v1.0.4
 	github.com/pkg/errors v0.9.1
 	gopkg.in/yaml.v3 v3.0.1
 )

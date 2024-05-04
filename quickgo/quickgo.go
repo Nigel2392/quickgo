@@ -15,6 +15,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/quickgo/v2/quickgo/config"
 	"github.com/Nigel2392/quickgo/v2/quickgo/logger"
 	"github.com/Nigel2392/quickgo/v2/quickgo/quickfs"
@@ -107,6 +108,12 @@ func LoadApp() (*App, error) {
 
 	app.Config = cfg
 
+	for _, hook := range goldcrest.Get[AppHook](HookQuickGoLoaded) {
+		if err = hook(app); err != nil {
+			return nil, err
+		}
+	}
+
 	return app, nil
 }
 
@@ -142,6 +149,12 @@ func (a *App) LoadProjectConfig(directory string) (err error) {
 
 	logger.Debugf("Loaded project config %s", a.ProjectConfig.Name)
 
+	for _, hook := range goldcrest.Get[ProjectHook](HookProjectLoaded) {
+		if err = hook(a, proj); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -151,6 +164,14 @@ func (a *App) WriteExampleProjectConfig(directory string) (err error) {
 
 	if directory == "" {
 		if directory, err = os.Getwd(); err != nil {
+			return err
+		}
+	}
+
+	logger.Debugf("Writing example project config to %s", directory)
+
+	for _, hook := range goldcrest.Get[ProjectHook](HookProjectExample) {
+		if err = hook(a, example); err != nil {
 			return err
 		}
 	}
@@ -204,6 +225,12 @@ func (a *App) WriteProject(proj *config.Project, directory string, raw bool) err
 	// Run commands before copying the project files.
 	if err = proj.BeforeCopy.Execute(context); err != nil {
 		return errors.Wrap(err, "failed to execute before copy steps")
+	}
+
+	for _, hook := range goldcrest.Get[ProjectWithDirHook](HookProjectBeforeWrite) {
+		if err = hook(a, proj, projectDir); err != nil {
+			return err
+		}
 	}
 
 	// Create the project directory.
@@ -276,6 +303,12 @@ func (a *App) WriteProject(proj *config.Project, directory string, raw bool) err
 		return errors.Wrap(err, "failed to execute after copy steps")
 	}
 
+	for _, hook := range goldcrest.Get[ProjectWithDirHook](HookProjectAfterWrite) {
+		if err = hook(a, proj, projectDir); err != nil {
+			return err
+		}
+	}
+
 	logger.Infof("Finished copying project files to %s", projectDir)
 
 	return nil
@@ -294,6 +327,13 @@ func (a *App) WriteProjectConfig(proj *config.Project) error {
 	}
 
 	logger.Infof("Writing project config to %s", path)
+
+	for _, hook := range goldcrest.Get[ProjectHook](HookProjectBeforeSave) {
+		if err = hook(a, proj); err != nil {
+			return err
+		}
+
+	}
 
 	err = config.WriteYaml(proj, path)
 	if err != nil {
@@ -347,6 +387,12 @@ func (a *App) WriteProjectConfig(proj *config.Project) error {
 
 	logger.Infof("Finished writing project to %s", zipPath)
 
+	for _, hook := range goldcrest.Get[ProjectHook](HookProjectAfterSave) {
+		if err = hook(a, proj); err != nil {
+			return err
+		}
+	}
+
 	return err
 }
 
@@ -366,6 +412,12 @@ func (a *App) ReadProjectConfig(name string) (proj *config.Project, closeFiles f
 	)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load YAML for project config %s", name)
+	}
+
+	for _, hook := range goldcrest.Get[ProjectWithDirHook](HookProjectBeforeLoad) {
+		if err = hook(a, proj, absDirPath); err != nil {
+			return nil, closeFiles, err
+		}
 	}
 
 	proj.Root = quickfs.NewFSDirectory(
@@ -421,6 +473,12 @@ func (a *App) ReadProjectConfig(name string) (proj *config.Project, closeFiles f
 			zipFiles = append(zipFiles, zipF)
 
 			proj.Root.AddFile(f.Name, zipF)
+		}
+	}
+
+	for _, hook := range goldcrest.Get[ProjectHook](HookQuickGoLoaded) {
+		if err = hook(a, proj); err != nil {
+			return nil, closeFiles, err
 		}
 	}
 
@@ -483,6 +541,16 @@ func (a *App) ListProjects() ([]string, error) {
 		projects = append(projects, d.Name())
 	}
 
+	for _, hook := range goldcrest.Get[AppListProjectsHook](HookQuickGoListProjects) {
+		var p, err = hook(a, projects)
+		if err != nil {
+			return nil, err
+		}
+
+		projects = p
+
+	}
+
 	return projects, nil
 }
 
@@ -506,6 +574,16 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var pathParts = strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	var primary = strings.ToLower(pathParts[0])
+
+	for _, hook := range goldcrest.Get[AppServeHook](HookQuickGoServer) {
+		if served, err := hook(a, w, r); err != nil {
+			logger.Errorf("Failed to serve: %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		} else if served {
+			logger.Debugf("'%s' was served and hijacked by a hook", r.URL.Path)
+		}
+	}
 
 	switch {
 	case primary == "projects":
