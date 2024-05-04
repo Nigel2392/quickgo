@@ -3,7 +3,7 @@ package command_test
 import (
 	"testing"
 
-	"github.com/Nigel2392/quickgo/v2/command"
+	"github.com/Nigel2392/quickgo/v2/quickgo/command"
 )
 
 var env = map[string]any{
