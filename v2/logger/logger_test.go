@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Nigel2392/quickgo/v2/quickgo/logger"
+	"github.com/Nigel2392/quickgo/v2/logger"
 )
 
 type LoggerTestStruct struct {
