@@ -20,7 +20,7 @@ QuickGo is a simple and easy to use golang command line tool for creating projec
 quickgo can be installed using the following command:
 
 ```bash
-go install github.com/Nigel2392/quickgo/v2@v2.2.8
+go install github.com/Nigel2392/quickgo/v2@v2.2.9
 ```
 
 # Usage
