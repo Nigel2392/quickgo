@@ -3,8 +3,11 @@ package logger
 import "io"
 
 var _globalLogger *Logger = &Logger{
-	Level:  InfoLevel,
-	Output: io.Discard,
+	Level:       InfoLevel,
+	OutputDebug: io.Discard,
+	OutputInfo:  io.Discard,
+	OutputWarn:  io.Discard,
+	OutputError: io.Discard,
 }
 
 func Global() *Logger {
@@ -21,6 +24,14 @@ func PWriter(label string, level LogLevel) io.Writer {
 
 func Setup(l *Logger) {
 	_globalLogger = l
+}
+
+func SetOutput(level LogLevel, w io.Writer) {
+	_globalLogger.SetOutput(level, w)
+}
+
+func Output(level LogLevel) io.Writer {
+	return _globalLogger.Output(level)
 }
 
 func SetLevel(level LogLevel) {

@@ -18,6 +18,7 @@ import (
 
 const (
 	QUICKGO_DIR         = ".quickgo"     // The directory for QuickGo files, resides in the executable directory.
+	QUICKGO_LOG_NAME    = "quickgo.log"  // The log file name.
 	QUICKGO_CONFIG_NAME = "quickgo.yaml" // Config file for QuickGo, resides in the executable directory.
 	PROJECT_CONFIG_NAME = "quickgo.yaml" // Config file for the project, resides in the project (working) directory.
 	PROJECT_ZIP_NAME    = "project.zip"  // The name of the project zip file.

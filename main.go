@@ -105,10 +105,14 @@ func main() {
 
 	logger.Setup(&logger.Logger{
 		Level:      logger.InfoLevel,
-		Output:     os.Stdout,
 		Prefix:     "quickgo",
 		WrapPrefix: quickgo.ColoredLogWrapper,
 	})
+
+	logger.SetOutput(
+		logger.OutputAll,
+		quickgo.Logfile(os.Stdout),
+	)
 
 	flagSet.StringVar(&flagger.Project.Name, "name", "", "The name of the project.")
 	flagSet.StringVar(&flagger.Project.DelimLeft, "delim-left", "", "The left delimiter for the project templates.")
@@ -170,6 +174,14 @@ func main() {
 			slices.SortFunc(commands, func(a, b *config.ProjectCommand) int {
 				return strings.Compare(a.Name, b.Name)
 			})
+
+			if len(commands) == 0 {
+				fmt.Println(quickgo.Craft(
+					quickgo.CMD_Yellow,
+					"No commands found in the project.",
+				))
+				return
+			}
 
 			fmt.Println(
 				quickgo.Craft(

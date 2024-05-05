@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 )
 
 type LogLevel int8
@@ -21,6 +22,8 @@ var levelMap = map[LogLevel]string{
 }
 
 const (
+	OutputAll LogLevel = -1
+
 	// DebugLevel is the lowest log level.
 	DebugLevel LogLevel = iota
 
@@ -41,9 +44,10 @@ type LogWriter struct {
 
 func (lw *LogWriter) Write(p []byte) (n int, err error) {
 	if lw.Level >= lw.Logger.Level {
-		lw.Logger.writePrefix(lw.Level, lw.Logger.Output)
-		n, err = lw.Logger.Output.Write(p)
-		lw.Logger.writeSuffix(lw.Logger.Output)
+		var out = lw.Logger.Output(lw.Level)
+		lw.Logger.writePrefix(lw.Level, out)
+		n, err = out.Write(p)
+		lw.Logger.writeSuffix(out)
 	}
 	return
 }
@@ -58,12 +62,63 @@ type Logger struct {
 	// Suffix is the suffix for each log message.
 	Suffix string
 
-	// Output is the output writer.
-	Output io.Writer
+	// Outputs for the log messages.
+	OutputDebug io.Writer
+	OutputInfo  io.Writer
+	OutputWarn  io.Writer
+	OutputError io.Writer
 
 	// WrapPrefix determines how the prefix should be wrapped
 	// based on the LogLevel.
 	WrapPrefix func(LogLevel, string) string
+}
+
+func (l *Logger) SetOutput(level LogLevel, w io.Writer) {
+	switch level {
+	case DebugLevel:
+		l.OutputDebug = w
+	case InfoLevel:
+		l.OutputInfo = w
+	case WarnLevel:
+		l.OutputWarn = w
+	case ErrorLevel:
+		l.OutputError = w
+	case OutputAll:
+		l.OutputDebug = w
+		l.OutputInfo = w
+		l.OutputWarn = w
+		l.OutputError = w
+	}
+}
+
+func (l *Logger) validateOutputs() {
+	if l.OutputDebug == nil {
+		l.OutputDebug = io.Discard
+	}
+	if l.OutputInfo == nil {
+		l.OutputInfo = l.OutputDebug
+	}
+	if l.OutputWarn == nil {
+		l.OutputWarn = l.OutputInfo
+	}
+	if l.OutputError == nil {
+		l.OutputError = l.OutputWarn
+	}
+}
+
+func (l *Logger) Output(level LogLevel) io.Writer {
+	l.validateOutputs()
+	switch level {
+	case DebugLevel:
+		return l.OutputDebug
+	case InfoLevel:
+		return l.OutputInfo
+	case WarnLevel:
+		return l.OutputWarn
+	case ErrorLevel:
+		return l.OutputError
+	}
+	return nil
 }
 
 func (l *Logger) SetLevel(level LogLevel) {
@@ -72,10 +127,14 @@ func (l *Logger) SetLevel(level LogLevel) {
 
 func (l *Logger) Copy() *Logger {
 	return &Logger{
-		Level:      l.Level,
-		Output:     l.Output,
-		Prefix:     l.Prefix,
-		WrapPrefix: l.WrapPrefix,
+		Level:       l.Level,
+		Prefix:      l.Prefix,
+		Suffix:      l.Suffix,
+		WrapPrefix:  l.WrapPrefix,
+		OutputDebug: l.OutputDebug,
+		OutputInfo:  l.OutputInfo,
+		OutputWarn:  l.OutputWarn,
+		OutputError: l.OutputError,
 	}
 }
 
@@ -174,6 +233,10 @@ func (l *Logger) writePrefix(level LogLevel, w io.Writer) {
 	}
 
 	_, _ = b.Write([]byte(level.String()))
+	_, _ = b.Write([]byte(" / "))
+
+	var t = time.Now().Format("2006-01-02 15:04:05")
+	_, _ = b.Write([]byte(t))
 	_, _ = b.Write([]byte("]: "))
 
 	var prefix = b.String()
@@ -192,7 +255,8 @@ func (l *Logger) writeSuffix(w io.Writer) {
 }
 
 func (l *Logger) log(level LogLevel, args ...interface{}) {
-	if l.Output == nil {
+	var out = l.Output(level)
+	if out == nil {
 		return
 	}
 
@@ -206,11 +270,11 @@ func (l *Logger) log(level LogLevel, args ...interface{}) {
 		message = l.WrapPrefix(level, message)
 	}
 
-	_, _ = l.Output.Write(
+	_, _ = out.Write(
 		[]byte(message),
 	)
 
-	_, _ = l.Output.Write([]byte("\n"))
+	_, _ = out.Write([]byte("\n"))
 }
 
 func (l *Logger) logf(level LogLevel, format string, args ...interface{}) {

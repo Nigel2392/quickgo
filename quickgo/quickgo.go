@@ -3,12 +3,15 @@ package quickgo
 import (
 	"archive/zip"
 	"bytes"
+	"fmt"
 	"io"
 	"io/fs"
 	"maps"
 	"os"
+	"os/signal"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 
@@ -23,6 +26,62 @@ var (
 	cliApplication *App
 )
 
+type ansiStrippedWriter struct {
+	io.Writer
+}
+
+const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
+
+var re = regexp.MustCompile(ansi)
+
+func StripANSI(str string) string {
+	return re.ReplaceAllString(str, "")
+}
+
+func (w *ansiStrippedWriter) Write(p []byte) (n int, err error) {
+	return w.Writer.Write([]byte(StripANSI(string(p))))
+}
+
+// Output the log file to the given writer.
+// If the writer is nil, the log file will be written to the default location.
+// This function may panic if the log file cannot be opened.
+func Logfile(output io.Writer) io.Writer {
+	var (
+		logPath = GetQuickGoPath(config.QUICKGO_LOG_NAME)
+		err     error
+		file    *os.File
+		writer  io.Writer
+	)
+
+	file, err = os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+
+	if output != nil {
+		writer = io.MultiWriter(output, &ansiStrippedWriter{file})
+	} else {
+		writer = &ansiStrippedWriter{file}
+	}
+
+	go func() {
+		var c = make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+		<-c
+
+		logger.Infof("Closing log file %s", logPath)
+		err = file.Close()
+		if err != nil {
+			fmt.Printf("Failed to close log file %s\n", logPath)
+			os.Exit(1)
+		} else {
+			os.Exit(0)
+		}
+	}()
+
+	return writer
+}
+
 type (
 	App struct {
 		Config        *config.QuickGo `yaml:"config"`        // The configuration for QuickGo.
@@ -30,6 +89,7 @@ type (
 		Patterns      []string        `yaml:"patterns"`      // The patterns for the templates.
 		AppFS         fs.FS           `yaml:"-"`             // The file system for the app, resides in the userprofile home directory.
 		ProjectFS     fs.FS           `yaml:"-"`             // The file system for the project, resides in the project (working) directory.
+		logfile       io.Writer       `yaml:"-"`             // The log file.
 	}
 )
 
@@ -108,6 +168,19 @@ func LoadApp() (*App, error) {
 	}
 
 	return app, nil
+}
+
+func (a *App) Logger(level logger.LogLevel, output io.Writer) *logger.Logger {
+	var lg = &logger.Logger{
+		Level: level,
+	}
+
+	lg.SetOutput(
+		logger.OutputAll,
+		Logfile(output),
+	)
+
+	return lg
 }
 
 // Load the project configuration from the current working directory.
@@ -248,6 +321,11 @@ func (a *App) WriteProject(proj *config.Project, directory string, raw bool) err
 		}
 
 		var path = filepath.Join(projectDir, b.String())
+
+		if a.ProjectConfig.IsExcluded(fl) {
+			logger.Debugf("Excluded %s", fl.GetPath())
+			return false, nil
+		}
 
 		switch f := fl.(type) {
 		case *quickfs.FSFile:

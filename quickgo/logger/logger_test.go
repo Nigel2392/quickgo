@@ -32,8 +32,11 @@ var (
 
 func init() {
 	logger.Setup(&logger.Logger{
-		Level:  logger.WarnLevel,
-		Output: outputBuffer,
+		Level:       logger.WarnLevel,
+		OutputDebug: outputBuffer,
+		OutputInfo:  outputBuffer,
+		OutputWarn:  outputBuffer,
+		OutputError: outputBuffer,
 	})
 }
 
@@ -62,8 +65,11 @@ func Difference(a, b string) (string, string, string) {
 func TestLogWriter(t *testing.T) {
 	for _, test := range LoggerTestCases {
 		var log = &logger.Logger{
-			Level:  test.LoggerLevel,
-			Output: &test.b,
+			Level:       test.LoggerLevel,
+			OutputDebug: &test.b,
+			OutputInfo:  &test.b,
+			OutputWarn:  &test.b,
+			OutputError: &test.b,
 		}
 		var lw = log.Writer(test.Level)
 		test.b.Reset()
@@ -79,8 +85,11 @@ func TestLogWriter(t *testing.T) {
 func TestLogger(t *testing.T) {
 	for _, test := range LoggerTestCases {
 		var log = &logger.Logger{
-			Level:  test.LoggerLevel,
-			Output: &test.b,
+			Level:       test.LoggerLevel,
+			OutputDebug: &test.b,
+			OutputInfo:  &test.b,
+			OutputWarn:  &test.b,
+			OutputError: &test.b,
 		}
 		test.b.Reset()
 
