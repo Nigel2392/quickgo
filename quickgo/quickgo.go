@@ -30,16 +30,13 @@ type ansiStrippedWriter struct {
 	io.Writer
 }
 
+// https://github.com/acarl005/stripansi
 const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
 
 var re = regexp.MustCompile(ansi)
 
-func StripANSI(str string) string {
-	return re.ReplaceAllString(str, "")
-}
-
 func (w *ansiStrippedWriter) Write(p []byte) (n int, err error) {
-	return w.Writer.Write([]byte(StripANSI(string(p))))
+	return w.Writer.Write([]byte(re.ReplaceAllString(string(p), "")))
 }
 
 // Output the log file to the given writer.

@@ -22,7 +22,6 @@ var levelMap = map[LogLevel]string{
 }
 
 const (
-	OutputAll LogLevel = -1
 
 	// DebugLevel is the lowest log level.
 	DebugLevel LogLevel = iota
@@ -35,6 +34,9 @@ const (
 
 	// ErrorLevel is used for errors.
 	ErrorLevel
+
+	// OutputAll is used to output all log levels in the SetOutput function.
+	OutputAll LogLevel = -1
 )
 
 type LogWriter struct {

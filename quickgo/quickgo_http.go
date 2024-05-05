@@ -62,9 +62,11 @@ func (a *App) HttpHandler() http.Handler {
 	mux.Handle("/static/", &LogHandler{
 		Handler: http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))),
 		Where:   "static files",
+		Level:   logger.DebugLevel,
 	})
 	mux.Handle("/favicon.ico", &LogHandler{
 		Handler: http.HandlerFunc(a.serveFavicon),
+		Level:   logger.DebugLevel,
 		Where:   "favicon",
 	})
 	return a.middleware(mux)
@@ -131,6 +133,7 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	logger.Debugf("Reading project '%s'", pathParts[0])
 	proj, closeFiles, err := a.ReadProjectConfig(pathParts[0])
 	if err != nil {
 		logger.Errorf("Failed to read project '%s': %v", pathParts[0], err)
@@ -138,7 +141,10 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer closeFiles()
+	defer func() {
+		logger.Debugf("Closing project '%s'", proj.Name)
+		closeFiles()
+	}()
 
 	parent, fileLike, err = proj.Root.FindWithParent(pathParts[1:])
 	if err != nil {
@@ -163,6 +169,8 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request) {
 
 		context.Dir = dir
 		context.ObjectList = FileObjects
+
+		logger.Debugf("Serving directory '%s' in project '%s'", dir.Name, proj.Name)
 
 		if err = a.executeServeTemplate(w, "dir.tmpl", &context); err != nil {
 			logger.Errorf("Failed to render directory object in project '%s': %v", proj.Name, err)
@@ -194,6 +202,8 @@ func (a *App) serveProjects(w http.ResponseWriter, r *http.Request) {
 
 	context.File = file
 	context.Content = content
+
+	logger.Debugf("Serving file '%s' in project '%s'", file.Name, proj.Name)
 
 	if err = a.executeServeTemplate(w, "file.tmpl", &context); err != nil {
 		logger.Errorf("Failed to render file object in project '%s': %v", proj.Name, err)
