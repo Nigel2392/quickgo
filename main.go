@@ -106,6 +106,7 @@ func main() {
 	logger.Setup(&logger.Logger{
 		Level:      logger.InfoLevel,
 		Prefix:     "quickgo",
+		OutputTime: true,
 		WrapPrefix: quickgo.ColoredLogWrapper,
 	})
 

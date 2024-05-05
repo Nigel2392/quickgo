@@ -62,6 +62,9 @@ type Logger struct {
 	// Suffix is the suffix for each log message.
 	Suffix string
 
+	// Display a timestamp alongside the log message.
+	OutputTime bool
+
 	// Outputs for the log messages.
 	OutputDebug io.Writer
 	OutputInfo  io.Writer
@@ -233,10 +236,13 @@ func (l *Logger) writePrefix(level LogLevel, w io.Writer) {
 	}
 
 	_, _ = b.Write([]byte(level.String()))
-	_, _ = b.Write([]byte(" / "))
 
-	var t = time.Now().Format("2006-01-02 15:04:05")
-	_, _ = b.Write([]byte(t))
+	if l.OutputTime {
+		_, _ = b.Write([]byte(" / "))
+		var t = time.Now().Format("2006-01-02 15:04:05")
+		_, _ = b.Write([]byte(t))
+	}
+
 	_, _ = b.Write([]byte("]: "))
 
 	var prefix = b.String()
