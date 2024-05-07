@@ -129,7 +129,7 @@ type (
 		// These will be asked via stdin if not provided.
 		Args map[string]any `yaml:"args" json:"args"`
 		// The steps to run for the command.
-		Steps *command.StepList `yaml:"steps" json:"steps"`
+		Steps *command.StepList `yaml:",inline" json:",inline"`
 	}
 )
 

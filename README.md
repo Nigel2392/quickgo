@@ -300,9 +300,8 @@ commands:
 
         # The steps which will be executed when running the command.
         steps:
-            steps:
-                - name: Echo Project Name
-                  command: echo
-                  args:
-                    - $customProjectName
+            - name: Echo Project Name
+              command: echo
+              args:
+                - $customProjectName
 ```
