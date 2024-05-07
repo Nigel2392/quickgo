@@ -243,7 +243,8 @@ name: my-project
 
 # Optional extra context that can be used in text files throughout your project.
 # These can also be used when running commands like beforeCopy, afterCopy and the project commands themselves.
-# Example: `{{projectName}}` will be replaced with `My Project` in all files, if the leftDelim and rightDelim are set to `{{` and `}}`.
+# Example: `{{.Name}}` will be replaced with `my-project` in all files, if the leftDelim and rightDelim are set to `{{` and `}}`.
+# Context variables can be addressed with `{{ index .Context "CustomName" }}`.
 context:
     CustomName: My Project
     Description: This is a project template for My Project.
@@ -251,7 +252,7 @@ context:
 
 # The left and right delimiters for the template engine.
 # These are used to replace the context variables in the project files.
-# Example: `{{ projectName }}` will be replaced with `My Project` in all files, if the leftDelim and rightDelim are set to `{{` and `}}`.
+# Example: `{{ .Name }}` will be replaced with `my-project` in all files, if the leftDelim and rightDelim are set to `{{` and `}}`.
 delimLeft: '${{'
 delimRight: '}}'
 
