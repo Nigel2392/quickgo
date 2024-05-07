@@ -86,6 +86,10 @@ Read more:
 {{ index .Context "Description" }}
 ```
 
+### Note: Filepaths
+
+Filepaths in the project template can also contain variables!
+
 ## Saving your project templates
 
 After you have configured your project in `quickgo.yaml`, you can save them with the following commands.
