@@ -201,7 +201,7 @@ func main() {
 					fmt.Printf("  - %s\n", quickgo.Craft(quickgo.CMD_Cyan, c.Name))
 					continue
 				}
-				fmt.Printf("  - %s: %s", quickgo.Craft(quickgo.CMD_Cyan, c.Name), c.Description)
+				fmt.Printf("  - %s: %s\n", quickgo.Craft(quickgo.CMD_Cyan, c.Name), c.Description)
 			}
 		}
 	}
