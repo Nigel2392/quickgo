@@ -4,11 +4,11 @@ on:
   release:
     types: [created]
   
-  push:
-    branches:    
-      - main
-    tags:        
-      - v2.*
+  # push:
+  #   branches:    
+  #     - main
+  #   tags:        
+  #     - v2.*
 
 permissions:
     contents: write
