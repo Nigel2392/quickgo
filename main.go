@@ -31,7 +31,7 @@ type Flagger struct {
 	TargetDir string
 
 	// Used to pass in the quickgo template
-	Import string
+	Save bool
 
 	// Used to pass in the quickgo template
 	Use string
@@ -44,6 +44,11 @@ type Flagger struct {
 
 	// Serve the project over HTTP
 	Serve bool
+
+	// Lock the project configuration.
+	// 1: Lock the project configuration.
+	// 0: Unlock the project configuration.
+	Lock int
 }
 
 func (f *Flagger) CopyProject(proj *config.Project) {
@@ -126,11 +131,12 @@ func main() {
 
 	flagSet.Var(&flagger.Exclude, "e", "A list of files to exclude from the project in glob format.")
 	flagSet.StringVar(&flagger.TargetDir, "d", "", "The target directory to write the project to.")
-	flagSet.StringVar(&flagger.Import, "get", "", "Import the project from the current directory.")
+	flagSet.BoolVar(&flagger.Save, "save", false, "Import the project from the current directory.")
 	flagSet.StringVar(&flagger.Use, "use", "", "Use the specified project configuration.")
 	flagSet.BoolVar(&flagger.Example, "example", false, "Print an example project configuration.")
 	flagSet.BoolVar(&flagger.ListProjects, "list", false, "List the projects available for use.")
 	flagSet.BoolVar(&flagger.Serve, "serve", false, "Serve the project over HTTP.")
+	flagSet.IntVar(&flagger.Lock, "lock", -1, "Lock the project configuration. 1=Lock, 0=Unlock.")
 	flagSet.BoolFunc("v", "Enable verbose logging.", enableVerboseLogging)
 
 	flagSet.Usage = func() {
@@ -158,7 +164,7 @@ func main() {
 		// Try to load the project configuration.
 		// It might contain some more commands! :D
 		if qg.ProjectConfig == nil {
-			err = qg.LoadProjectConfig(".")
+			err = qg.LoadCurrentProject(".")
 		}
 		if err != nil && errors.Is(err, config.ErrProjectMissing) {
 			// No project found in the current directory.
@@ -218,15 +224,32 @@ func main() {
 	}
 
 	switch {
-	case flagger.Import != "":
+	case flagger.Save:
 
 		if flagger.TargetDir == "" {
 			flagger.TargetDir = "."
 		}
 
-		err = qg.LoadProjectConfig(flagger.TargetDir)
+		err = qg.LoadCurrentProject(flagger.TargetDir)
 		if err != nil {
-			logger.Fatal(1, err)
+			fmt.Println(err)
+			if !errors.Is(err, config.ErrProjectMissing) {
+				logger.Fatal(1, fmt.Errorf("failed to read project config: %w", err))
+			}
+
+			var ctx = parseCommandlineContext(flagSet.Args(), false)
+			var abs, _ = filepath.Abs(flagger.TargetDir)
+
+			_, err = qg.NewProject(quickgo.SimpleProject{
+				Name:       filepath.Base(abs),
+				DelimLeft:  flagger.Project.DelimLeft,
+				DelimRight: flagger.Project.DelimRight,
+				Context:    ctx,
+				Exclude:    flagger.Exclude,
+			})
+			if err != nil {
+				logger.Fatal(1, fmt.Errorf("failed to create project: %w", err))
+			}
 		}
 
 		err = qg.ProjectConfig.Load(flagger.TargetDir)
@@ -240,8 +263,6 @@ func main() {
 		flagger.CopyConfig(
 			qg.Config,
 		)
-
-		qg.ProjectConfig.Name = flagger.Import
 
 		if err = qg.ProjectConfig.Validate(); err != nil {
 			logger.Fatal(1, fmt.Errorf("failed to validate project config: %w", err))
@@ -329,6 +350,30 @@ func main() {
 			))
 		}
 
+	case flagger.Lock == 1 || flagger.Lock == 0:
+
+		if err = qg.LoadCurrentProject(flagger.TargetDir); err != nil && errors.Is(err, config.ErrProjectMissing) {
+			logger.Fatal(1, "Cannot lock/unlock project outside of a project.")
+		} else if err != nil {
+			logger.Fatal(1, fmt.Errorf("failed to read project config: %w", err))
+		}
+
+		var action string
+
+		if flagger.Lock == 1 {
+			err = config.LockProject(flagger.TargetDir)
+			action = "lock"
+		} else {
+			err = config.UnlockProject(flagger.TargetDir)
+			action = "unlock"
+		}
+
+		if err != nil {
+			logger.Fatal(1, fmt.Errorf("failed to %s project: %w", action, err))
+		}
+
+		logger.Infof("Project was %sed.", action)
+
 	case flagger.Serve:
 
 		flagger.CopyConfig(
@@ -371,11 +416,11 @@ func main() {
 			cmd     *config.ProjectCommand
 			command = args[0]
 			ctx     = parseCommandlineContext(args[1:], true)
-			err     = qg.LoadProjectConfig(".")
+			err     = qg.LoadCurrentProject(flagger.TargetDir)
 		)
 		if err != nil && !errors.Is(err, config.ErrProjectMissing) {
 			logger.Fatal(1, fmt.Errorf("failed to read project config: %w", err))
-		} else if errors.Is(err, config.ErrProjectMissing) {
+		} else if err != nil {
 			logger.Fatal(1, "Cannot execute project commands outside of a project.")
 		}
 

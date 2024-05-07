@@ -180,8 +180,47 @@ func (a *App) Logger(level logger.LogLevel, output io.Writer) *logger.Logger {
 	return lg
 }
 
+type SimpleProject struct {
+	Name       string                 `yaml:"name"`
+	DelimLeft  string                 `yaml:"delimLeft"`
+	DelimRight string                 `yaml:"delimRight"`
+	Exclude    []string               `yaml:"exclude"`
+	Context    map[string]interface{} `yaml:"context"`
+}
+
+func (a *App) NewProject(conf SimpleProject) (proj *config.Project, err error) {
+	proj = &config.Project{
+		Name:       conf.Name,
+		DelimLeft:  conf.DelimLeft,
+		DelimRight: conf.DelimRight,
+		Context:    conf.Context,
+		Exclude:    conf.Exclude,
+	}
+
+	if err = proj.Validate(); err != nil {
+		return nil, err
+	}
+
+	a.ProjectConfig = proj
+
+	logger.Infof("Initialized new project config for '%s'", proj.Name)
+
+	for _, hook := range goldcrest.Get[ProjectHook](HookProjectLoaded) {
+		if err = hook(a, proj); err != nil {
+			return nil, err
+		}
+	}
+
+	var dirPath = GetProjectDirectoryPath(proj.Name, true)
+	if _, err = os.Stat(dirPath); err == nil {
+		return nil, config.ErrProjectExists
+	}
+
+	return proj, nil
+}
+
 // Load the project configuration from the current working directory.
-func (a *App) LoadProjectConfig(directory string) (err error) {
+func (a *App) LoadCurrentProject(directory string) (err error) {
 
 	logger.Debugf("Loading project config: %s", config.PROJECT_CONFIG_NAME)
 
@@ -201,7 +240,7 @@ func (a *App) LoadProjectConfig(directory string) (err error) {
 	if err != nil && os.IsNotExist(err) {
 		return config.ErrProjectMissing
 	} else if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to load current project's config %s", directory)
 	}
 
 	if err = proj.Validate(); err != nil {
@@ -245,23 +284,20 @@ func (a *App) WriteExampleProjectConfig(directory string) (err error) {
 func (a *App) WriteProject(proj *config.Project, directory string, raw bool) error {
 
 	var (
-		cwd string
 		err error
 	)
 
 	// The directory to copy the project files to.
 	if directory == "" {
-		cwd, err = os.Getwd()
+		directory, err = os.Getwd()
 		if err != nil {
 			return err
 		}
-	} else {
-		cwd = directory
 	}
 
-	logger.Debugf("Checking if project is locked in '%s'", cwd)
+	logger.Debugf("Checking if project is locked in '%s'", directory)
 
-	if err = config.IsLocked(cwd); err != nil {
+	if err = config.IsLocked(directory); err != nil {
 		return err
 	}
 
@@ -269,7 +305,7 @@ func (a *App) WriteProject(proj *config.Project, directory string, raw bool) err
 	// Also setup the directory paths.
 	var (
 		context    = maps.Clone(proj.Context)
-		projectDir = filepath.Join(cwd, proj.Name)
+		projectDir = filepath.Join(directory, proj.Name)
 	)
 
 	if !filepath.IsAbs(projectDir) {
@@ -319,7 +355,7 @@ func (a *App) WriteProject(proj *config.Project, directory string, raw bool) err
 
 		var path = filepath.Join(projectDir, b.String())
 
-		if a.ProjectConfig.IsExcluded(fl) {
+		if proj.IsExcluded(fl) {
 			logger.Debugf("Excluded %s", fl.GetPath())
 			return false, nil
 		}
@@ -333,8 +369,11 @@ func (a *App) WriteProject(proj *config.Project, directory string, raw bool) err
 				return true, errors.Wrapf(err, "failed to create directory %s", dir)
 			}
 
-			osFile, err := os.Create(path)
-			if err != nil {
+			osFile, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, os.ModePerm)
+			if err != nil && os.IsExist(err) {
+				logger.Infof("Skipping, file %s already exists", path)
+				return false, nil
+			} else if err != nil {
 				return true, errors.Wrapf(err, "failed to create file %s", path)
 			}
 			defer osFile.Close()
@@ -363,6 +402,12 @@ func (a *App) WriteProject(proj *config.Project, directory string, raw bool) err
 	if err != nil {
 		logger.Errorf("Failed to copy project files to %s", projectDir)
 		return err
+	}
+
+	// Write the project configuration to the project directory.
+	var configPath = filepath.Join(projectDir, config.PROJECT_CONFIG_NAME)
+	if err = config.WriteYaml(proj, configPath); err != nil {
+		return errors.Wrapf(err, "failed to write project config to %s", configPath)
 	}
 
 	// Run commands after copying the project files.

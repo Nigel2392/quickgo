@@ -27,6 +27,7 @@ const (
 	// Error messages.
 	ErrCommandMissing = ErrorStr("command not found")
 	ErrProjectMissing = ErrorStr("project config not found")
+	ErrProjectExists  = ErrorStr("project config already exists")
 	ErrProjectInvalid = ErrorStr("project config is invalid")
 )
 
@@ -38,10 +39,43 @@ var (
 )
 
 func IsLocked(path string) error {
+	if path == "" {
+		path = "."
+	}
 	var lockfile = filepath.Join(path, LOCKFILE_NAME)
 	var _, err = os.Stat(lockfile)
 	if err == nil {
 		return errors.Errorf("project is locked: '%s'", lockfile)
+	}
+	return nil
+}
+
+// Lock locks the project.
+func LockProject(path string) error {
+	if path == "" {
+		path = "."
+	}
+	var lockfile = filepath.Join(path, LOCKFILE_NAME)
+	var file, err = os.OpenFile(lockfile, os.O_CREATE|os.O_EXCL, 0666)
+	if err != nil && os.IsExist(err) {
+		return errors.Errorf("project is already locked: '%s'", lockfile)
+	} else if err != nil {
+		return errors.Wrapf(err, "error creating lock file '%s'", lockfile)
+	}
+	return file.Close()
+}
+
+// Unlock unlocks the project.
+func UnlockProject(path string) (err error) {
+	if path == "" {
+		path = "."
+	}
+	var lockfile = filepath.Join(path, LOCKFILE_NAME)
+	err = os.Remove(lockfile)
+	if err != nil && os.IsNotExist(err) {
+		return errors.Errorf("project is not locked: '%s'", lockfile)
+	} else if err != nil {
+		return errors.Wrapf(err, "error removing lock file '%s'", lockfile)
 	}
 	return nil
 }

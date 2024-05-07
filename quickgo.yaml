@@ -1,13 +1,35 @@
+# The name of your project template.
+# This is how you want it to be adressed when using the template.
+# It can optionally be overridden, example: `quickgo -get my-project -name my-custom-project-name`
 name: my-project
+
+# Optional extra context that can be used in text files throughout your project.
+# These can also be used when running commands like beforeCopy, afterCopy and the project commands themselves.
+# Example: `{{projectName}}` will be replaced with `My Project` in all files, if the leftDelim and rightDelim are set to `{{` and `}}`.
 context:
     Name: My Project
-    Data:
-        Name1: My Project
-        Path1: /path/to/my-project
-        Name2: My Project 2
-        Path2: /path/to/my-project-2
 
+
+# The left and right delimiters for the template engine.
+# These are used to replace the context variables in the project files.
+# Example: `{{ projectName }}` will be replaced with `My Project` in all files, if the leftDelim and rightDelim are set to `{{` and `}}`.
+delimLeft: ${{
+delimRight: '}}'
+
+# A list of files and directories to exclude from the project template.
+# These will not be saved; there is currently no way to exclude files after saving.
+exclude:
+    - '*node_modules*'
+    - '*dist*'
+    - .git
+
+# A list of steps to run before copying the template to the destination.
+# This can be used to prepare the project files, etc.
+# The project is not yet copied to the destination at this point.
 beforeCopy:
+    # This will execute:
+    #   echo $projectName
+    #   echo $projectPath  
     steps:
         - name: Echo Project Name Before
           command: echo
@@ -17,6 +39,10 @@ beforeCopy:
           command: echo
           args:
             - $projectPath
+
+# A list of steps to run after copying the template to the destination.
+# This can be used to clean up, install dependencies, etc.
+# The project is already copied to the destination at this point.
 afterCopy:
     steps:
         - name: Echo Project Name After
@@ -27,20 +53,26 @@ afterCopy:
           command: echo
           args:
             - $projectPath
+
+# A list of custom commands that can be run on the project.
+# These can be used to automate tasks, etc.
+# Example: `quickgo <command-name> <args>`
 commands:
+
+    # The label is the name of the command.
     echoName:
-        description: Echo Project Name
+
+        # Description is only used for type annotations.
+        description: Echo the project name, supply one with customProjectName=myValue
+
+        # Arguments which can be setup before running the command.
         args:
-            customProjectName: $Data
+            customProjectName: $projectName
+
+        # The steps which will be executed when running the command.
         steps:
             steps:
                 - name: Echo Project Name
                   command: echo
                   args:
                     - $customProjectName
-delimLeft: '@{{'
-delimRight: '}}'
-exclude:
-    - '*node_modules*'
-    - '*dist*'
-    - .git
