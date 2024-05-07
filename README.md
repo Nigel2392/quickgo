@@ -49,6 +49,8 @@ We provide a command to easily generate an example configuration file for quickg
 
 This provides a good starting point for creating your own project configurations.
 
+**It is however fully possible to skip creating a `quickgo.yaml` file and control everything via the command line.**
+
 ```bash
 quickgo -example
 ```
@@ -99,7 +101,6 @@ Filepaths in the project template can also contain variables!
 ## Saving your project templates
 
 After you have configured your project in `quickgo.yaml`, you can save them with the following commands.
-It is however fully possible to skip creating a `quickgo.yaml` file and control everything via the command line.
 
 ```bash
 # Save the project (this will be saved in $HOME/.quickgo/projects).
