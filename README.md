@@ -1,5 +1,5 @@
 <center>
-    <img src="https://github.com/Nigel2392/quickgo/blob/main/v2/_templates/static/quickgo.png?raw=true" alt="QuickGo Logo"/>
+    <img src="https://github.com/Nigel2392/quickgo/blob/main/quickgo/_templates/static/quickgo.png?raw=true" alt="QuickGo Logo"/>
 </center>
 
 # Why QuickGo?
@@ -20,7 +20,7 @@ QuickGo is a simple and easy to use golang command line tool for creating projec
 quickgo can be installed using the following command:
 
 ```bash
-go install github.com/Nigel2392/quickgo/v2@v2.3.4
+go install github.com/Nigel2392/quickgo/v2@v2.4.2
 ```
 
 # Usage
@@ -63,6 +63,28 @@ It allows for the following fields:
 - `beforeCopy`: A list of commands to run before copying the project templates.
 - `afterCopy`: A list of commands to run after copying the project templates.s
 - `commands`: A list of commands to run before and after copying the project templates.
+
+## Using the template engine
+
+The template engine uses Go's `text/template` package.
+
+This allows for the use of variables in your project files.
+
+Variables are by default delimited by `{{` and `}}`, this can be changed in the `quickgo.yaml` file.
+
+Example of a variable in a file:
+
+Let's take the example `quickgo.yaml` file at the end of the README to demonstrate how this works.
+
+```text
+# {{ .Name }}
+
+# This is a project template for {{ index .Context "CustomName" }}.
+
+Read more:
+
+{{ index .Context "Description" }}
+```
 
 ## Saving your project templates
 
@@ -131,6 +153,8 @@ It is also possible to provide the `-d` flag to run the commands in the project'
 quickgo echoName
 
 # Run the `echoName` command defined in the `myconfig/quickgo.yaml` file.
+# Note the shell delimiters! These are NOT defined in the `quickgo.yaml` file,
+# but instead handled by the OS.
 quickgo -d 'myconfig' echoName customProjectName="custom-${projectName}"
 ```
 
@@ -170,7 +194,6 @@ quickgo echoName customProjectName="custom-${projectName}"
 -v: Enable verbose logging.
 ```
 
-
 ### Example `quickgo.yaml` configuration
 
 See the example file below to get a better understanding of how to configure your project templates.
@@ -185,13 +208,14 @@ name: my-project
 # These can also be used when running commands like beforeCopy, afterCopy and the project commands themselves.
 # Example: `{{projectName}}` will be replaced with `My Project` in all files, if the leftDelim and rightDelim are set to `{{` and `}}`.
 context:
-    Name: My Project
+    CustomName: My Project
+    Description: This is a project template for My Project.
 
 
 # The left and right delimiters for the template engine.
 # These are used to replace the context variables in the project files.
 # Example: `{{ projectName }}` will be replaced with `My Project` in all files, if the leftDelim and rightDelim are set to `{{` and `}}`.
-delimLeft: ${{
+delimLeft: '${{'
 delimRight: '}}'
 
 # A list of files and directories to exclude from the project template.
