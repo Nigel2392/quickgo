@@ -40,8 +40,9 @@ const (
 )
 
 type LogWriter struct {
-	Logger *Logger
-	Level  LogLevel
+	Logger    *Logger
+	Level     LogLevel
+	writtenNL bool
 }
 
 func (lw *LogWriter) Write(p []byte) (n int, err error) {

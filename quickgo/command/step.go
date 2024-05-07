@@ -1,6 +1,7 @@
 package command
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -44,13 +45,28 @@ func (s Step) Execute(env map[string]any) error {
 	//cmd.SysProcAttr = &syscall.SysProcAttr{
 	//	HideWindow: true,
 	//}
-	cmd.Stdout = logger.PWriter(
-		"command", logger.InfoLevel,
+
+	var (
+		stdout = new(bytes.Buffer)
+		stderr = new(bytes.Buffer)
 	)
-	cmd.Stderr = logger.PWriter(
-		"command", logger.ErrorLevel,
-	)
-	return cmd.Run()
+
+	// Writer for newlines
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%s: %s", err, stderr.String())
+	} else {
+		if stdout.Len() > 0 {
+			logger.Infof("%s", stdout.String())
+		}
+
+		if stderr.Len() > 0 {
+			logger.Errorf("%s", stderr.String())
+		}
+	}
+	return nil
 }
 
 // ExpandArgs expands the arguments.
