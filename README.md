@@ -129,6 +129,32 @@ Example:
 quickgo -use my-project -d my/target/directory -name my-custom-project-name / customContextKey=customContextValue
 ```
 
+## Serving your project templates
+
+You can also serve your project templates over HTTP.
+
+This can be done with the following command:
+
+```bash
+# Serve the project over HTTP.
+quickgo -serve
+```
+
+You can also provide a custom host and port to serve the project on.
+
+```bash
+# Serve the project over HTTP on a custom host and port.
+quickgo -serve -host 127.0.0.1 -port 8080
+```
+
+Or even serve the project over HTTPS.
+
+```bash
+# Serve the project over HTTPS.
+quickgo -serve -port 443 -tls-cert /path/to/cert.pem -tls-key /path/to/key.pem
+```
+
+
 ## Locking the project configuration.
 
 If you want to lock the project configuration, you can do so by providing the `-lock` flag.
