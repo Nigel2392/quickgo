@@ -22,6 +22,8 @@ const (
 	QUICKGO_CONFIG_NAME = "quickgo.yaml" // Config file for QuickGo, resides in the executable directory.
 	PROJECT_CONFIG_NAME = "quickgo.yaml" // Config file for the project, resides in the project (working) directory.
 	PROJECT_ZIP_NAME    = "project.zip"  // The name of the project zip file.
+	PROJECTS_DIR        = "projects"     // The directory for project files, resides in the executable directory.
+	COMMANDS_DIR        = "commands"     // The directory for command javscript files, resides in the executable directory.
 	LOCKFILE_NAME       = "quickgo.lock" // The lock file name.
 
 	// Error messages.

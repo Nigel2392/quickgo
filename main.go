@@ -39,6 +39,12 @@ type Flagger struct {
 	// List the projects available for use
 	ListProjects bool
 
+	// List the commands available for all projects
+	ListCommands bool
+
+	// Save a global command for this user.
+	SaveCommand string
+
 	// Write an example project configuration
 	Example bool
 
@@ -135,6 +141,8 @@ func main() {
 	flagSet.StringVar(&flagger.Use, "use", "", "Use the specified project configuration.")
 	flagSet.BoolVar(&flagger.Example, "example", false, "Print an example project configuration.")
 	flagSet.BoolVar(&flagger.ListProjects, "list", false, "List the projects available for use.")
+	flagSet.BoolVar(&flagger.ListCommands, "list-commands", false, "List the commands available for all projects.")
+	flagSet.StringVar(&flagger.SaveCommand, "save-command", "", "Save a global command for this user by providing a path to a JS file.")
 	flagSet.BoolVar(&flagger.Serve, "serve", false, "Serve the project over HTTP.")
 	flagSet.IntVar(&flagger.Lock, "lock", -1, "Lock the project configuration. 1=Lock, 0=Unlock.")
 	flagSet.BoolFunc("v", "Enable verbose logging.", enableVerboseLogging)
@@ -404,6 +412,33 @@ func main() {
 		if err != nil {
 			logger.Fatal(1, fmt.Errorf("failed to start server: %w", err))
 		}
+
+	case flagger.ListCommands:
+
+		var commands, err = qg.ListJSFiles()
+		if err != nil {
+			logger.Fatal(1, fmt.Errorf("failed to list commands: %w", err))
+		}
+
+		if len(commands) == 0 {
+			fmt.Println(quickgo.Craft(quickgo.CMD_Yellow, "No commands found."))
+			return
+		}
+
+		fmt.Println(quickgo.Craft(quickgo.CMD_Red, "Commands:"))
+		for _, cmd := range commands {
+			fmt.Printf("  - %s\n", quickgo.Craft(
+				quickgo.CMD_Blue, cmd,
+			))
+		}
+
+	case flagger.SaveCommand != "":
+
+		var err = qg.SaveJS(flagger.SaveCommand)
+		if err != nil {
+			logger.Fatal(1, fmt.Errorf("failed to save command: %w", err))
+		}
+
 	default:
 		// Parse commands for the project itself.
 		var args = flagSet.Args()
@@ -412,6 +447,31 @@ func main() {
 			os.Exit(1)
 		}
 
+		// Execute app JS files if the command is 'exec'.
+		if args[0] == "exec" && len(args) > 1 {
+			var (
+				fn  = args[1]
+				ctx = parseCommandlineContext(args[2:], true)
+			)
+
+			if err = qg.LoadCurrentProject(flagger.TargetDir); err != nil {
+				logger.Warnf("failed to read project config: %s", err)
+			}
+
+			err = qg.ExecJS(
+				fn, ctx,
+			)
+
+			if err != nil {
+				logger.Fatal(1, err)
+			}
+
+			return
+		} else if args[0] == "exec" {
+			logger.Fatal(1, "no function provided to execute")
+		}
+
+		// Look for commands for this project specifically
 		var (
 			cmd     *config.ProjectCommand
 			command = args[0]
