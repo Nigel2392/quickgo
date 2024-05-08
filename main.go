@@ -149,7 +149,7 @@ func main() {
 
 	flagSet.Usage = func() {
 		fmt.Println(quickgo.Craft(quickgo.CMD_Cyan, "QuickGo: A simple project generator and server."))
-		fmt.Println("Usage: quickgo [flags | command] [?args]")
+		fmt.Println("Usage: quickgo [-flags | exec <command> | <project-command>] [?args]")
 		fmt.Println("Available application flags:")
 		flagSet.VisitAll(func(f *flag.Flag) {
 
@@ -168,6 +168,22 @@ func main() {
 				f.Usage,
 			)
 		})
+
+		var commands, err = qg.ListJSFiles()
+		if err != nil {
+			logger.Warn(1, fmt.Errorf("failed to list commands: %w", err))
+		}
+
+		if len(commands) > 0 {
+			fmt.Println(
+				quickgo.Craft(quickgo.CMD_Blue, "Available commands:"),
+			)
+			for _, cmd := range commands {
+				fmt.Printf("  - %s\n", quickgo.Craft(
+					quickgo.CMD_Cyan, cmd,
+				))
+			}
+		}
 
 		// Try to load the project configuration.
 		// It might contain some more commands! :D
