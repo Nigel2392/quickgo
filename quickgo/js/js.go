@@ -68,6 +68,9 @@ func (s *Command) Run(scriptSource string) (err error) {
 		goja.TagFieldNameMapper("json", true),
 	)
 
+	vm.Set("json", JSON())
+	vm.Set("base64", Base64())
+
 	for k, v := range s._Globals {
 		err = vm.Set(k, v)
 		if err != nil {

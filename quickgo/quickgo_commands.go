@@ -97,9 +97,15 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 		return errors.Wrapf(err, "failed to read script %s", script)
 	}
 
-	var projectName string
+	var (
+		projectName string
+		projectPath string
+	)
 	if a.ProjectConfig != nil {
 		projectName = a.ProjectConfig.Name
+		projectPath = getTargetDirectory(
+			projectName,
+		)
 	}
 
 	cmd = js.NewScript(
@@ -111,9 +117,7 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 				"config":      a.Config,
 				"environ":     args,
 				"projectName": projectName,
-				"projectPath": GetProjectDirectoryPath(
-					a.ProjectConfig.Name, true,
-				),
+				"projectPath": projectPath,
 			},
 			"os": map[string]any{
 				"args": os.Args,
