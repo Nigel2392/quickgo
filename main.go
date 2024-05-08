@@ -14,6 +14,7 @@ import (
 
 	quickgo "github.com/Nigel2392/quickgo/v2/quickgo"
 	"github.com/Nigel2392/quickgo/v2/quickgo/config"
+	"github.com/Nigel2392/quickgo/v2/quickgo/js"
 	"github.com/Nigel2392/quickgo/v2/quickgo/logger"
 )
 
@@ -248,7 +249,7 @@ func main() {
 	}
 
 	switch {
-	case flagger.Save:
+	case flagger.Save: // Save a project configuration from the current working / a specified directory.
 
 		if flagger.TargetDir == "" {
 			flagger.TargetDir = "."
@@ -296,7 +297,8 @@ func main() {
 		if err != nil {
 			logger.Fatal(1, fmt.Errorf("failed to write project config: %w", err))
 		}
-	case flagger.Use != "":
+
+	case flagger.Use != "": // Use a saved project configuration and it's files.
 
 		// Parse optional extra context provided by CLI arguments.
 		var (
@@ -324,7 +326,8 @@ func main() {
 		if err != nil {
 			logger.Fatal(1, fmt.Errorf("failed to write project: %w", err))
 		}
-	case flagger.Example:
+
+	case flagger.Example: // Write an example project configuration to the target directory.
 
 		var example = config.ExampleProjectConfig()
 
@@ -360,7 +363,8 @@ func main() {
 		if err != nil {
 			logger.Fatal(1, fmt.Errorf("failed to write example project config: %w", err))
 		}
-	case flagger.ListProjects:
+
+	case flagger.ListProjects: // List all available (saved) projects.
 
 		var projects, err = qg.ListProjects()
 		if err != nil {
@@ -374,7 +378,7 @@ func main() {
 			))
 		}
 
-	case flagger.Lock == 1 || flagger.Lock == 0:
+	case flagger.Lock == 1 || flagger.Lock == 0: // Lock or unlock the project configuration.
 
 		if err = qg.LoadCurrentProject(flagger.TargetDir); err != nil && errors.Is(err, config.ErrProjectMissing) {
 			logger.Fatal(1, "Cannot lock/unlock project outside of a project.")
@@ -398,7 +402,7 @@ func main() {
 
 		logger.Infof("Project was %sed.", action)
 
-	case flagger.Serve:
+	case flagger.Serve: // Serve the project over HTTP.
 
 		flagger.CopyConfig(
 			qg.Config,
@@ -429,7 +433,7 @@ func main() {
 			logger.Fatal(1, fmt.Errorf("failed to start server: %w", err))
 		}
 
-	case flagger.ListCommands:
+	case flagger.ListCommands: // List all available (global) javascript commands.
 
 		var commands, err = qg.ListJSFiles()
 		if err != nil {
@@ -448,7 +452,7 @@ func main() {
 			))
 		}
 
-	case flagger.SaveCommand != "":
+	case flagger.SaveCommand != "": // Save a global command (js file with `main` function) for this user.
 
 		var err = qg.SaveJS(flagger.SaveCommand)
 		if err != nil {
@@ -457,6 +461,7 @@ func main() {
 
 	default:
 		// Parse commands for the project itself.
+		// Optionally execute global javascript commands if the first argument is 'exec'.
 		var args = flagSet.Args()
 		if len(args) == 0 {
 			flagSet.Usage()
@@ -464,12 +469,19 @@ func main() {
 		}
 
 		// Execute app JS files if the command is 'exec'.
-		if args[0] == "exec" && len(args) > 1 {
+		var isExec = strings.ToLower(args[0]) == "exec"
+		if isExec && len(args) > 1 {
 			var (
 				fn  = args[1]
 				ctx = parseCommandlineContext(args[2:], true)
 			)
 
+			logger.Infof(
+				"Executing global command: '%s'", fn,
+			)
+
+			// Try to load the project.
+			// It does not matter if it fails, we can still execute the command.
 			if err = qg.LoadCurrentProject(flagger.TargetDir); err != nil {
 				logger.Warnf("failed to read project config: %s", err)
 			}
@@ -477,17 +489,16 @@ func main() {
 			err = qg.ExecJS(
 				flagger.TargetDir, fn, ctx,
 			)
-
-			if err != nil {
-				logger.Fatal(1, err)
+			if err != nil && !errors.Is(err, js.ErrExitCode) {
+				logger.Fatal(1, fmt.Errorf("failed to execute command: %w", err))
 			}
-
 			return
-		} else if args[0] == "exec" {
+		} else if isExec {
 			logger.Fatal(1, "no function provided to execute")
 		}
 
-		// Look for commands for this project specifically
+		// It was not a global 'exec' command.
+		// Look for commands for this project specifically.
 		var (
 			cmd     *config.ProjectCommand
 			command = args[0]

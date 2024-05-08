@@ -19,6 +19,17 @@ type (
 		_Funcs   []VMFunc
 	}
 
+	CommandError struct {
+		Importance int
+		Message    string
+		Wrapped    error
+	}
+
+	CommandResult struct {
+		Importance int    `json:"importance"`
+		Message    string `json:"message"`
+	}
+
 	OptFunc func(*Command)
 	VMFunc  func(*goja.Runtime) error
 )
@@ -28,6 +39,18 @@ var (
 	ErrMainMissing = errors.New("main function not found")
 	ErrMainInvalid = errors.New("main function is invalid")
 )
+
+func (e *CommandError) Error() string {
+	return e.Message
+}
+
+func (e *CommandError) Unwrap() error {
+	return e.Wrapped
+}
+
+func (e *CommandError) ExitCode() int {
+	return e.Importance
+}
 
 func WithGlobal(key string, value any) OptFunc {
 	return func(s *Command) {
@@ -69,7 +92,7 @@ func (s *Command) AddFunc(f ...VMFunc) {
 	s._Funcs = append(s._Funcs, f...)
 }
 
-func (s *Command) Run(scriptSource string) (err error) {
+func (s *Command) Run(scriptSource string) (result *CommandResult, err error) {
 
 	var vm *goja.Runtime
 	if s._VM != nil {
@@ -82,41 +105,51 @@ func (s *Command) Run(scriptSource string) (err error) {
 		goja.TagFieldNameMapper("json", true),
 	)
 
-	vm.Set("json", JSON())
 	vm.Set("base64", Base64())
+	vm.Set("Result", func(importance int, message string) *CommandResult {
+		return &CommandResult{
+			Importance: importance,
+			Message:    message,
+		}
+	})
 
 	for k, v := range s._Globals {
 		err = vm.Set(k, v)
 		if err != nil {
-			return errors.Wrap(err, "could not add global to VM")
+			return nil, errors.Wrap(err, "could not add global to VM")
 		}
 	}
 
 	for _, f := range s._Funcs {
 		if err = f(vm); err != nil {
-			return errors.Wrap(err, "could not add function to VM")
+			return nil, errors.Wrap(err, "could not add function to VM")
 		}
 	}
 
 	_, err = vm.RunString(scriptSource)
 	if err != nil {
-		return errors.Wrap(err, "error running script")
+		return nil, errors.Wrap(err, "error running script")
 	}
 
 	var mainFunc = vm.Get(s.Main)
 	if mainFunc == nil {
-		return ErrMainMissing
+		return nil, ErrMainMissing
 	}
 
-	var main func() int
+	var main func() *CommandResult
 	if err = vm.ExportTo(mainFunc, &main); err != nil {
-		return ErrMainInvalid
+		return nil, ErrMainInvalid
 	}
 
-	var exitCode = main()
-	if exitCode != 0 {
-		return ErrExitCode
+	result = main()
+
+	if result.Importance != 0 {
+		return result, &CommandError{
+			Importance: result.Importance,
+			Wrapped:    ErrExitCode,
+			Message:    result.Message,
+		}
 	}
 
-	return nil
+	return result, nil
 }

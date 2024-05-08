@@ -127,6 +127,9 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 			"environ":     args,
 			"projectName": projectName,
 			"projectPath": projectPath,
+			"projectLocked": func() bool {
+				return config.IsLocked(targetDir) == nil
+			},
 		}
 		fsModule = map[string]any{
 			"cleanPath": filepath.Clean,
@@ -138,6 +141,9 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 					return ""
 				}
 				return path
+			},
+			"getWd": func() string {
+				return getTargetDirectory(targetDir)
 			},
 			"writeFile": func(path string, data goja.Value) error {
 				var b []byte
@@ -216,9 +222,6 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 			"args": os.Args,
 			"getEnv": func(key string) string {
 				return os.Getenv(key)
-			},
-			"getWd": func() string {
-				return getTargetDirectory(targetDir)
 			},
 			"setEnv": func(key, value string) error {
 				logger.Debugf("Setting environment variable '%s'='%s'", key, value)
@@ -325,5 +328,23 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 
 	logger.Debugf("Executing script '%s'", scriptPath)
 
-	return cmd.Run(string(script))
+	result, err := cmd.Run(string(script))
+	if err != nil {
+		if _, ok := err.(*js.CommandError); !ok {
+			return errors.Wrapf(err, "failed to execute script '%s'", scriptName)
+		}
+	}
+
+	var s = fmt.Sprintf("Script '%s' executed with exit code %d", scriptName, result.Importance)
+	if result.Message != "" {
+		s = fmt.Sprintf("%s: %s", s, result.Message)
+	}
+
+	if result.Importance == 0 {
+		logger.Info(s)
+	} else {
+		logger.Error(s)
+	}
+
+	return js.ErrExitCode
 }

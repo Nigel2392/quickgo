@@ -20,7 +20,7 @@ QuickGo is a simple and easy to use golang command line tool for creating projec
 quickgo can be installed using `go install` with the following command:
 
 ```bash
-go install github.com/Nigel2392/quickgo/v2@v2.4.5
+go install github.com/Nigel2392/quickgo/v2@v2.4.6
 ```
 
 Optionally we provide a binary for Linux, MacOS and Windows.
@@ -161,7 +161,6 @@ Or even serve the project over HTTPS.
 quickgo -serve -port 443 -tls-cert /path/to/cert.pem -tls-key /path/to/key.pem
 ```
 
-
 ## Locking the project configuration.
 
 If you want to lock the project configuration, you can do so by providing the `-lock` flag.
@@ -183,7 +182,7 @@ quickgo -lock 1
 You can also run the commands defined in your `quickgo.yaml` file.
 
 It is also possible to provide the `-d` flag to run the commands in the project's directory.
-  
+
 ```bash
 # Run the `echoName` command defined in the `quickgo.yaml` file.
 # This will echo the project name.
@@ -210,6 +209,64 @@ quickgo echoName
 quickgo echoName customProjectName="custom-${projectName}"
 ```
 
+## Global commands
+
+### Saving global commands
+
+You can also save global commands for your user.
+
+These will be stored in `$HOME/.quickgo/commands`.
+
+These should be javascript files.
+
+Example:
+
+```bash
+# Save a global command for this user.
+quickgo -save-command /path/to/my-command.js
+```
+
+Where the `my-command.js` file should look like this:
+
+For a more advanced examples, see the [commands](./commands) directory.
+
+```javascript
+function main() {
+    console.debug("Generating random number...");
+    let rand = Math.floor(Math.random() * 10);
+    if (rand > 5) {
+        return Result(1, "Failed");
+    }
+
+    if (!quickgo.environ.myVar) {
+        return Result(1, "myVar not set, please run `quickgo exec my-command myVar=myValue`");
+    }
+
+    return Result(0, "Success");
+}
+```
+
+### Running global commands
+
+You can run global commands with the following command:
+
+```bash
+# Run the global command.
+quickgo exec my-command myVar=myValue
+``` 
+
+`my-command` is the name of the javascript file minus the `.js` extension.
+
+### Listing global commands
+
+You can list the global commands with the following command:
+
+```bash
+# List the global commands.
+quickgo -list-commands
+```
+
+
 ## All available application flags:
 
 ```bash
@@ -218,12 +275,14 @@ quickgo echoName customProjectName="custom-${projectName}"
 -delim-right: The right delimiter for the project templates.
 -e: A list of files to exclude from the project in glob format.
 -example=false: Print an example project configuration.
--save=false: Import the project from the current directory.
 -host=localhost: The host to run the server on.
 -list=false: List the projects available for use.
+-list-commands=false: List the commands available for all projects.
 -lock=-1: Lock the project configuration. 1=Lock, 0=Unlock.
 -name: The name of the project.
 -port=8080: The port to run the server on.
+-save=false: Import the project from the current directory.
+-save-command: Save a global command for this user by providing a path to a JS file.
 -serve=false: Serve the project over HTTP.
 -tls-cert: The path to the TLS certificate.
 -tls-key: The path to the TLS key.
