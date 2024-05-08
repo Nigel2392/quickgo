@@ -6,6 +6,7 @@ require (
 	github.com/Nigel2392/goldcrest v1.0.4
 	github.com/dop251/goja v0.0.0-20240220182346-e401ed450204
 	github.com/elliotchance/orderedmap/v2 v2.2.0
+	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/pkg/errors v0.9.1
 	gopkg.in/yaml.v3 v3.0.1
 )

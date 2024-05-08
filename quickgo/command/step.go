@@ -39,9 +39,24 @@ func (s *Step) ParseArgs(env map[string]any) ([]string, []string) {
 
 // Execute runs the command.
 func (s Step) Execute(env map[string]any) error {
-	var args, envSlice = s.ParseArgs(env)
+	var (
+		args     []string
+		envSlice []string
+	)
+
+	// Parse the arguments if env is provided.
+	if env != nil {
+		args, envSlice = s.ParseArgs(env)
+	} else {
+		args = s.Args
+	}
+
 	var cmd = exec.Command(s.Command, args...)
-	cmd.Env = envSlice
+
+	// Set the command environment variables (when provided)
+	if envSlice != nil {
+		cmd.Env = envSlice
+	}
 	//cmd.SysProcAttr = &syscall.SysProcAttr{
 	//	HideWindow: true,
 	//}

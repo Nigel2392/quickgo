@@ -459,7 +459,7 @@ func main() {
 			}
 
 			err = qg.ExecJS(
-				fn, ctx,
+				flagger.TargetDir, fn, ctx,
 			)
 
 			if err != nil {
