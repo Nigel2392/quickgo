@@ -118,84 +118,173 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 		)
 	}
 
-	var vm = goja.New()
+	var (
+		vm            = goja.New()
+		quickgoModule = map[string]any{
+			"app":         a,
+			"project":     a.ProjectConfig,
+			"config":      a.Config,
+			"environ":     args,
+			"projectName": projectName,
+			"projectPath": projectPath,
+		}
+		fsModule = map[string]any{
+			"cleanPath": filepath.Clean,
+			"joinPath":  filepath.Join,
+			"absPath": func(path string) string {
+				path, err = filepath.Abs(path)
+				if err != nil {
+					logger.Error(err)
+					return ""
+				}
+				return path
+			},
+			"writeFile": func(path string, data goja.Value) error {
+				var b []byte
+				if vm.InstanceOf(data, vm.Get("Uint8Array").ToObject(vm)) {
+					b = data.Export().([]byte)
+				} else if d, ok := data.Export().(goja.ArrayBuffer); ok {
+					b = d.Bytes()
+				} else {
+					b = []byte(data.String())
+				}
+
+				err = os.WriteFile(path, b, os.ModePerm)
+				if err != nil {
+					logger.Error(err)
+					return err
+				}
+				logger.Debugf("File '%s' written by '%s'", path, scriptPath)
+				return nil
+			},
+			"readFile": func(path string) goja.Value {
+				var data []byte
+				var err error
+				if data, err = os.ReadFile(path); err != nil {
+					logger.Error(err)
+					return goja.Undefined()
+				}
+
+				logger.Debugf("File '%s' read by '%s'", path, scriptPath)
+
+				var arr = vm.NewArrayBuffer(data)
+				return vm.ToValue(arr)
+			},
+			"readTextFile": func(path string) string {
+				var data, err = os.ReadFile(path)
+				if err != nil {
+					logger.Error(err)
+					return ""
+				}
+
+				logger.Debugf("File '%s' read by '%s'", path, scriptPath)
+
+				return string(data)
+			},
+			"readDir": func(path string) goja.Value {
+
+				path, err = filepath.Abs(path)
+				if err != nil {
+					logger.Error(err)
+					return goja.Undefined()
+				}
+
+				var dir, err = os.ReadDir(path)
+				if err != nil {
+					logger.Error(err)
+					return goja.Undefined()
+				}
+
+				var d = make([]any, len(dir))
+				for i, f := range dir {
+					d[i] = map[string]any{
+						"name":        f.Name(),
+						"isDirectory": f.IsDir(),
+						"isFile":      f.Type().IsRegular(),
+						"path": filepath.Join(
+							path, f.Name(),
+						),
+					}
+				}
+
+				return vm.ToValue(
+					vm.NewArray(d...),
+				)
+			},
+		}
+		osModule = map[string]any{
+			"args": os.Args,
+			"getEnv": func(key string) string {
+				return os.Getenv(key)
+			},
+			"getWd": func() string {
+				return getTargetDirectory(targetDir)
+			},
+			"setEnv": func(key, value string) error {
+				logger.Debugf("Setting environment variable '%s'='%s'", key, value)
+				return os.Setenv(key, value)
+			},
+			"exec": func(cmd string, commandArgs ...string) goja.Value {
+
+				logger.Debugf(
+					"Executing command from '%s': %s %s",
+					scriptPath, cmd, strings.Join(commandArgs, " "),
+				)
+
+				// Parse the command arguments if the command is provided as a single string.
+				// Example: echo "Hello, World!" -> echo, ["Hello, World!"]
+				if strings.Index(cmd, " ") > 0 {
+					var s = strings.SplitN(cmd, " ", 2)
+					cmd = s[0]
+					if len(commandArgs) == 0 {
+						commandArgs, err = shellquote.Split(
+							s[1],
+						)
+						if err != nil {
+							logger.Errorf(
+								"failed to split command arguments for: %s: %s",
+								scriptPath, err,
+							)
+							return goja.Undefined()
+						}
+					} else {
+						logger.Warnf(
+							"command arguments are provided, but the command is already split for: %s",
+							scriptPath,
+						)
+					}
+				}
+
+				var command = exec.Command(cmd, commandArgs...)
+				var s = new(strings.Builder)
+
+				command.Stdout = s
+				command.Stderr = s
+
+				if err = command.Run(); err != nil {
+					logger.Errorf(
+						"failed to execute command: %s: %s",
+						scriptPath, err,
+					)
+					return goja.Undefined()
+				}
+
+				logger.Debugf(
+					"Command executed from '%s': %s %s",
+					scriptPath, cmd, strings.Join(commandArgs, " "),
+				)
+
+				return vm.ToValue(s.String())
+			},
+		}
+	)
 	cmd = js.NewScript(
 		"main",
 		js.WithVM(vm),
 		js.WithGlobals(map[string]any{
-			"quickgo": map[string]any{
-				"app":         a,
-				"project":     a.ProjectConfig,
-				"config":      a.Config,
-				"environ":     args,
-				"projectName": projectName,
-				"projectPath": projectPath,
-			},
-			"os": map[string]any{
-				"args": os.Args,
-				"getEnv": func(key string) string {
-					return os.Getenv(key)
-				},
-				"getWd": func() string {
-					return getTargetDirectory(targetDir)
-				},
-				"setEnv": func(key, value string) error {
-					logger.Debugf("Setting environment variable '%s'='%s'", key, value)
-					return os.Setenv(key, value)
-				},
-				"exec": func(cmd string, commandArgs ...string) goja.Value {
-
-					logger.Debugf(
-						"Executing command from '%s': %s %s",
-						scriptPath, cmd, strings.Join(commandArgs, " "),
-					)
-
-					// Parse the command arguments if the command is provided as a single string.
-					// Example: echo "Hello, World!" -> echo, ["Hello, World!"]
-					if strings.Index(cmd, " ") > 0 {
-						var s = strings.SplitN(cmd, " ", 2)
-						cmd = s[0]
-						if len(commandArgs) == 0 {
-							commandArgs, err = shellquote.Split(
-								s[1],
-							)
-							if err != nil {
-								logger.Errorf(
-									"failed to split command arguments for: %s: %s",
-									scriptPath, err,
-								)
-								return goja.Undefined()
-							}
-						} else {
-							logger.Warnf(
-								"command arguments are provided, but the command is already split for: %s",
-								scriptPath,
-							)
-						}
-					}
-
-					var command = exec.Command(cmd, commandArgs...)
-					var s = new(strings.Builder)
-
-					command.Stdout = s
-					command.Stderr = s
-
-					if err = command.Run(); err != nil {
-						logger.Errorf(
-							"failed to execute command: %s: %s",
-							scriptPath, err,
-						)
-						return goja.Undefined()
-					}
-
-					logger.Debugf(
-						"Command executed from '%s': %s %s",
-						scriptPath, cmd, strings.Join(commandArgs, " "),
-					)
-
-					return vm.ToValue(s.String())
-				},
-			},
+			"quickgo": quickgoModule,
+			"os":      osModule,
+			"fs":      fsModule,
 		}),
 	)
 
@@ -229,48 +318,6 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 
 			var arrBuff = vm.NewArrayBuffer(arr)
 			return vm.ToValue(arrBuff)
-		})
-		vm.Set("writeFile", func(path string, data goja.Value) error {
-			var b []byte
-			if vm.InstanceOf(data, vm.Get("Uint8Array").ToObject(vm)) {
-				b = data.Export().([]byte)
-			} else if d, ok := data.Export().(goja.ArrayBuffer); ok {
-				b = d.Bytes()
-			} else {
-				b = []byte(data.String())
-			}
-
-			err = os.WriteFile(path, b, os.ModePerm)
-			if err != nil {
-				logger.Error(err)
-				return err
-			}
-			logger.Debugf("File '%s' written by '%s'", path, scriptPath)
-			return nil
-		})
-		vm.Set("readFile", func(path string) goja.Value {
-			var data []byte
-			var err error
-			if data, err = os.ReadFile(path); err != nil {
-				logger.Error(err)
-				return goja.Undefined()
-			}
-
-			logger.Debugf("File '%s' read by '%s'", path, scriptPath)
-
-			var arr = vm.NewArrayBuffer(data)
-			return vm.ToValue(arr)
-		})
-		vm.Set("readTextFile", func(path string) string {
-			var data, err = os.ReadFile(path)
-			if err != nil {
-				logger.Error(err)
-				return ""
-			}
-
-			logger.Debugf("File '%s' read by '%s'", path, scriptPath)
-
-			return string(data)
 		})
 
 		return nil
