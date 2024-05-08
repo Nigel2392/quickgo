@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/Nigel2392/quickgo/v2/quickgo/command"
 	"github.com/Nigel2392/quickgo/v2/quickgo/config"
 	"github.com/Nigel2392/quickgo/v2/quickgo/js"
 	"github.com/Nigel2392/quickgo/v2/quickgo/logger"
@@ -45,16 +45,17 @@ func (a *App) ListJSFiles() ([]string, error) {
 
 func (a *App) SaveJS(path string) error {
 	var (
-		dirPath   = GetQuickGoPath(config.COMMANDS_DIR)
-		filename  = filepath.Join(dirPath, filepath.Base(path))
-		scriptSrc *os.File
-		file      *os.File
-		err       error
+		dirPath    = GetQuickGoPath(config.COMMANDS_DIR)
+		scriptName = filepath.Base(path)
+		outputName = filepath.Join(dirPath, scriptName)
+		scriptSrc  *os.File
+		file       *os.File
+		err        error
 	)
 
 	path = filepath.FromSlash(path)
 
-	logger.Infof("Copying file %s to %s", path, filename)
+	logger.Infof("Copying file %s to %s", path, outputName)
 
 	if s, err := os.Stat(path); err != nil || s.IsDir() {
 		return errors.Wrapf(err, "file %s does not exist or is not a valid file", path)
@@ -65,7 +66,7 @@ func (a *App) SaveJS(path string) error {
 	}
 
 	file, err = os.Create(
-		filename,
+		outputName,
 	)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create file %s", path)
@@ -78,7 +79,13 @@ func (a *App) SaveJS(path string) error {
 	}
 
 	_, err = io.Copy(file, scriptSrc)
-	return errors.Wrapf(err, "failed to copy file %s to %s", path, file.Name())
+	if err != nil {
+		return errors.Wrapf(err, "failed to copy file %s to %s", path, file.Name())
+	}
+
+	logger.Infof("Command '%s' saved to '%s'", scriptName, outputName)
+
+	return nil
 }
 
 func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (err error) {
@@ -92,11 +99,14 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 		cmd    *js.Command
 	)
 
+	logger.Debugf("Reading script '%s'", scriptPath)
+
 	script, err = os.ReadFile(scriptPath)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read script %s", script)
 	}
 
+	logger.Debugf("'%s' has access to project config: %v", scriptName, a.ProjectConfig != nil)
 	var (
 		projectName string
 		projectPath string
@@ -104,12 +114,14 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 	if a.ProjectConfig != nil {
 		projectName = a.ProjectConfig.Name
 		projectPath = getTargetDirectory(
-			projectName,
+			targetDir,
 		)
 	}
 
+	var vm = goja.New()
 	cmd = js.NewScript(
 		"main",
+		js.WithVM(vm),
 		js.WithGlobals(map[string]any{
 			"quickgo": map[string]any{
 				"app":         a,
@@ -128,9 +140,15 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 					return getTargetDirectory(targetDir)
 				},
 				"setEnv": func(key, value string) error {
+					logger.Debugf("Setting environment variable '%s'='%s'", key, value)
 					return os.Setenv(key, value)
 				},
-				"exec": func(cmd string, commandArgs ...string) error {
+				"exec": func(cmd string, commandArgs ...string) goja.Value {
+
+					logger.Debugf(
+						"Executing command from '%s': %s %s",
+						scriptPath, cmd, strings.Join(commandArgs, " "),
+					)
 
 					// Parse the command arguments if the command is provided as a single string.
 					// Example: echo "Hello, World!" -> echo, ["Hello, World!"]
@@ -142,11 +160,11 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 								s[1],
 							)
 							if err != nil {
-								return errors.Wrapf(
-									err,
-									"failed to split command arguments for: %s",
-									scriptPath,
+								logger.Errorf(
+									"failed to split command arguments for: %s: %s",
+									scriptPath, err,
 								)
+								return goja.Undefined()
 							}
 						} else {
 							logger.Warnf(
@@ -156,13 +174,26 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 						}
 					}
 
-					var c = command.Step{
-						Name:    fmt.Sprintf("%s %s", cmd, strings.Join(commandArgs, " ")),
-						Command: cmd,
-						Args:    commandArgs,
+					var command = exec.Command(cmd, commandArgs...)
+					var s = new(strings.Builder)
+
+					command.Stdout = s
+					command.Stderr = s
+
+					if err = command.Run(); err != nil {
+						logger.Errorf(
+							"failed to execute command: %s: %s",
+							scriptPath, err,
+						)
+						return goja.Undefined()
 					}
 
-					return c.Execute(nil)
+					logger.Debugf(
+						"Command executed from '%s': %s %s",
+						scriptPath, cmd, strings.Join(commandArgs, " "),
+					)
+
+					return vm.ToValue(s.String())
 				},
 			},
 		}),
@@ -209,7 +240,13 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 				b = []byte(data.String())
 			}
 
-			return os.WriteFile(path, b, os.ModePerm)
+			err = os.WriteFile(path, b, os.ModePerm)
+			if err != nil {
+				logger.Error(err)
+				return err
+			}
+			logger.Debugf("File '%s' written by '%s'", path, scriptPath)
+			return nil
 		})
 		vm.Set("readFile", func(path string) goja.Value {
 			var data []byte
@@ -218,6 +255,8 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 				logger.Error(err)
 				return goja.Undefined()
 			}
+
+			logger.Debugf("File '%s' read by '%s'", path, scriptPath)
 
 			var arr = vm.NewArrayBuffer(data)
 			return vm.ToValue(arr)
@@ -228,11 +267,16 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 				logger.Error(err)
 				return ""
 			}
+
+			logger.Debugf("File '%s' read by '%s'", path, scriptPath)
+
 			return string(data)
 		})
 
 		return nil
 	})
+
+	logger.Debugf("Executing script '%s'", scriptPath)
 
 	return cmd.Run(string(script))
 }

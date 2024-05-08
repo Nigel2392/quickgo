@@ -12,6 +12,9 @@ type (
 		// The name of the main function to run.
 		Main string
 
+		// An override of a VM to use.
+		_VM *goja.Runtime
+
 		_Globals map[string]any
 		_Funcs   []VMFunc
 	}
@@ -42,6 +45,12 @@ func WithConsole(s *Command) {
 	s._Globals["console"] = Console()
 }
 
+func WithVM(vm *goja.Runtime) OptFunc {
+	return func(s *Command) {
+		s._VM = vm
+	}
+}
+
 func NewScript(mainFunc string, options ...OptFunc) (cmd *Command) {
 	var s = &Command{
 		Main:     mainFunc,
@@ -62,7 +71,12 @@ func (s *Command) AddFunc(f ...VMFunc) {
 
 func (s *Command) Run(scriptSource string) (err error) {
 
-	var vm = goja.New()
+	var vm *goja.Runtime
+	if s._VM != nil {
+		vm = s._VM
+	} else {
+		vm = goja.New()
+	}
 
 	vm.SetFieldNameMapper(
 		goja.TagFieldNameMapper("json", true),

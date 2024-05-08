@@ -66,8 +66,8 @@ func (a *App) HttpHandler() http.Handler {
 	})
 	mux.Handle("/favicon.ico", &LogHandler{
 		Handler: http.HandlerFunc(a.serveFavicon),
-		Level:   logger.DebugLevel,
 		Where:   "favicon",
+		Level:   logger.DebugLevel,
 	})
 	return a.middleware(mux)
 }

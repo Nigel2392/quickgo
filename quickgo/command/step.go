@@ -38,7 +38,7 @@ func (s *Step) ParseArgs(env map[string]any) ([]string, []string) {
 }
 
 // Execute runs the command.
-func (s Step) Execute(env map[string]any) error {
+func (s Step) Execute(env map[string]any) ([]byte, []byte, error) {
 	var (
 		args     []string
 		envSlice []string
@@ -70,18 +70,23 @@ func (s Step) Execute(env map[string]any) error {
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("%s: %s", err, stderr.String())
-	} else {
-		if stdout.Len() > 0 {
-			logger.Infof("%s", stdout.String())
-		}
+	var err = cmd.Run()
+	var stdoutB = stdout.Bytes()
+	var stderrB = stderr.Bytes()
 
-		if stderr.Len() > 0 {
-			logger.Errorf("%s", stderr.String())
-		}
+	if err != nil {
+		return stdoutB, stderrB, fmt.Errorf("%s: %s", err, string(stderrB))
 	}
-	return nil
+
+	if stdout.Len() > 0 {
+		logger.Info(string(stdoutB))
+	}
+
+	if stderr.Len() > 0 {
+		logger.Error(string(stderrB))
+	}
+
+	return stdoutB, stderrB, nil
 }
 
 // ExpandArgs expands the arguments.
