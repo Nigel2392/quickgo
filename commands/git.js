@@ -6,7 +6,7 @@ function main() {
 
     if (quickgo.environ.tag === true) {
         let tagName = os.exec("git tag --sort=committerdate | tail -1").stdout;
-        let regex = `(?:(\d+)\.)?(?:(\d+)\.)?(?:(\d+)\.\d+)`
+        let regex = `v(?:(\d+)\.)?(?:(\d+)\.)?(?:(\d+)\.\d+)`
         let match = tagName.match(regex);
         if (!match) {
             return Result(1, `Could not find a valid tag to increment!`);
@@ -16,7 +16,7 @@ function main() {
         let minor = parseInt(match[2]);
         let patch = parseInt(match[3]);
         patch++;
-        let newTag = `${major}.${minor}.${patch}`;
+        let newTag = `v${major}.${minor}.${patch}`;
         console.info(`Incrementing tag from ${tagName} to ${newTag}`);
         quickgo.environ.tag = newTag;
     }
