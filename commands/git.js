@@ -52,7 +52,7 @@ function main() {
     } else {
         console.info(`Pushing changes to default remote repository`);
         // Try to get the default remote repository, should work for most cases
-        let d = os.exec("git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'");
+        let d = os.exec("git symbolic-ref refs/remotes/origin/HEAD --short");
         if (d.error) {
             // Try fallback method
             console.warn(`Could not determine default remote repository, trying fallback method ${d.stdout}`);
