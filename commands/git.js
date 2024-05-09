@@ -49,6 +49,21 @@ function main() {
     if (quickgo.environ.origin) {
         console.info(`Pushing changes to remote repository`);
         pushStr += ` -u origin ${quickgo.environ.origin}`;
+    } else {
+        console.info(`Pushing changes to default remote repository`);
+        // Try to get the default remote repository, should work for most cases
+        let d = os.exec("git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'");
+        if (d.error) {
+            // Try fallback method
+            d = os.exec("basename $(git symbolic-ref --short refs/remotes/origin/HEAD)");
+        } 
+        if (d.error) {
+            // It's not nescessary to fail here, just warn the user
+            // Git *CAN* handle pushes without specifying the remote repository
+            console.warn(`Could not determine default remote repository, using 'master' ${d.stdout}`);
+        } else {
+            pushStr += ` -u origin ${d.stdout.trim()}`;
+        }
     }
     if (quickgo.environ.tag) {
         console.info(`Pushing tags to remote repository`);
