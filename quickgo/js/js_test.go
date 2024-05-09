@@ -10,7 +10,7 @@ import (
 func NewScript(funcName string, retValue any, retMessage string) string {
 	return fmt.Sprintf(`
 		function %s() {
-			return %v, "%s";
+			return Result(%v, "%s");
 		}
 	`, funcName, retValue, retMessage)
 }
