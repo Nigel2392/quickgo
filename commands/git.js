@@ -1,8 +1,11 @@
 function main() {
-    os.exec(`git add .`);
+    let errD = os.exec("git add .");
+    if (errD.error) {
+        return Result(1, `Could not add files to git! ${errD.stdout}`);
+    };
 
     if (quickgo.environ.tag === true) {
-        let tagName = os.exec("git tag --sort=committerdate | tail -1");
+        let tagName = os.exec("git tag --sort=committerdate | tail -1").stdout;
         let regex = `(?:(\d+)\.)?(?:(\d+)\.)?(?:(\d+)\.\d+)`
         let match = tagName.match(regex);
         if (!match) {
@@ -20,15 +23,21 @@ function main() {
 
     if (quickgo.environ.m) {
         console.info(`Committing changes with message: '${quickgo.environ.m}'`);
-        os.exec(`git commit -m "${quickgo.environ.m}"`);
+        errD = os.exec(`git commit -m "${quickgo.environ.m}"`);
     } else {
         console.info(`Committing changes with default message: 'QuickGo update'`);
-        os.exec(`git commit -m "QuickGo update"`);
+        errD = os.exec(`git commit -m "QuickGo update"`);
+    }
+    if (errD) {
+        return Result(1, `Could not commit changes to git! ${errD.stdout}`);
     }
 
     if (quickgo.environ.tag) {
         console.info(`Tagging commit with tag ${quickgo.environ.tag}`);
-        os.exec(`git tag ${quickgo.environ.tag}`);
+        errD = os.exec(`git tag ${quickgo.environ.tag}`);
+    }
+    if (errD) {
+        return Result(1, `Could not tag commit with tag ${quickgo.environ.tag}! ${errD.stdout}`);
     }
 
     let pushStr = `git push`;
@@ -42,7 +51,10 @@ function main() {
     }
     
     console.info(`Executing git command: ${pushStr}`)
-    os.exec(pushStr);
+    errD = os.exec(pushStr);
+    if (errD) {
+        return Result(1, `Could not push changes to remote repository! ${errD.stdout}`);
+    }
 
     return Result(0, `QuickGo git command executed successfully!`);
 }

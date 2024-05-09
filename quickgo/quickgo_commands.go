@@ -248,7 +248,13 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 								"failed to split command arguments for: %s: %s",
 								scriptPath, err,
 							)
-							return goja.Undefined()
+							return vm.ToValue(map[string]any{
+								"stdout":   "",
+								"exitCode": 1,
+								"error": fmt.Sprintf(
+									"failed to split command arguments: %s", err,
+								),
+							})
 						}
 					} else {
 						logger.Warnf(
@@ -269,7 +275,11 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 						"failed to execute command: %s: %s",
 						scriptPath, err,
 					)
-					return goja.Undefined()
+					return vm.ToValue(map[string]any{
+						"stdout":   s.String(),
+						"exitCode": 1,
+						"error":    err,
+					})
 				}
 
 				logger.Debugf(
@@ -277,7 +287,11 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 					scriptPath, cmd, strings.Join(commandArgs, " "),
 				)
 
-				return vm.ToValue(s.String())
+				return vm.ToValue(map[string]any{
+					"stdout":   s.String(),
+					"exitCode": command.ProcessState.ExitCode(),
+					"error":    err,
+				})
 			},
 		}
 	)
@@ -301,6 +315,9 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 			Info:  logger.Info,
 			Warn:  logger.Warn,
 			Error: logger.Error,
+			Fatal: func(a ...any) {
+				logger.Fatal(1, a...)
+			},
 		})
 		vm.Set("base64Encode", func(data goja.Value) string {
 			if vm.InstanceOf(data, vm.Get("Uint8Array").ToObject(vm)) {

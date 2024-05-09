@@ -19,6 +19,7 @@ func Console() *JSConsole {
 		Info:  logConsole,
 		Warn:  logConsole,
 		Error: logConsole,
+		Fatal: logConsole,
 	}
 }
 
@@ -36,6 +37,7 @@ type JSConsole struct {
 	Info  func(...any) `json:"info"`
 	Warn  func(...any) `json:"warn"`
 	Error func(...any) `json:"error"`
+	Fatal func(...any) `json:"fatal"`
 }
 
 type _json struct{}
