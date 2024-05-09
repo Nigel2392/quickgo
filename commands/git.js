@@ -28,7 +28,7 @@ function main() {
         console.info(`Committing changes with default message: 'QuickGo update'`);
         errD = os.exec(`git commit -m "QuickGo update"`);
     }
-    if (errD) {
+    if (errD.error) {
         return Result(1, `Could not commit changes to git! ${errD.stdout}`);
     }
 
@@ -36,7 +36,7 @@ function main() {
         console.info(`Tagging commit with tag ${quickgo.environ.tag}`);
         errD = os.exec(`git tag ${quickgo.environ.tag}`);
     }
-    if (errD) {
+    if (errD.error) {
         return Result(1, `Could not tag commit with tag ${quickgo.environ.tag}! ${errD.stdout}`);
     }
 
@@ -52,7 +52,7 @@ function main() {
     
     console.info(`Executing git command: ${pushStr}`)
     errD = os.exec(pushStr);
-    if (errD) {
+    if (errD.error) {
         return Result(1, `Could not push changes to remote repository! ${errD.stdout}`);
     }
 
