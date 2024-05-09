@@ -1,10 +1,22 @@
 function main() {
     os.exec(`git add .`);
 
-    //let tagName = quickgo.environ.tag;
-    //if (!tagName) {
-    //    tagName = os.exec("git tag --sort=committerdate | tail -1");
-    //}
+    if (quickgo.environ.tag === true) {
+        let tagName = os.exec("git tag --sort=committerdate | tail -1");
+        let regex = `(?:(\d+)\.)?(?:(\d+)\.)?(?:(\d+)\.\d+)`
+        let match = tagName.match(regex);
+        if (!match) {
+            return Result(1, `Could not find a valid tag to increment!`);
+        }
+
+        let major = parseInt(match[1]);
+        let minor = parseInt(match[2]);
+        let patch = parseInt(match[3]);
+        patch++;
+        let newTag = `${major}.${minor}.${patch}`;
+        console.info(`Incrementing tag from ${tagName} to ${newTag}`);
+        quickgo.environ.tag = newTag;
+    }
 
     if (quickgo.environ.m) {
         console.info(`Committing changes with message: '${quickgo.environ.m}'`);
