@@ -1,4 +1,9 @@
 function main() {
+    // Example:
+    // quickgo exec git m="QuickGo update" origin=master tag
+    // quickgo exec git tag=v1.0.0
+    // ...
+
     let errD = os.exec("git add .");
     if (errD.error) {
         return Result(1, `Could not add files to git! ${errD.stdout}`);
