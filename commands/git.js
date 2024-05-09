@@ -11,14 +11,14 @@ function main() {
     //}
 
     if (quickgo.environ.m) {
-        console.debug(`Committing changes with message ${quickgo.environ.m}`);
+        console.info(`Committing changes with message ${quickgo.environ.m}`);
         os.exec(`git commit -m "${quickgo.environ.message}"`);
     } else {
         os.exec(`git commit -m "QuickGo update"`);
     }
 
     if (quickgo.environ.tag) {
-        console.debug(`Tagging commit with tag ${quickgo.environ.tag}`);
+        console.info(`Tagging commit with tag ${quickgo.environ.tag}`);
         os.exec(`git tag ${quickgo.environ.tag}`);
     }
 
