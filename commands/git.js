@@ -8,7 +8,7 @@ function main() {
 
     if (quickgo.environ.m) {
         console.info(`Committing changes with message: '${quickgo.environ.m}'`);
-        os.exec(`git commit -m "${quickgo.environ.message}"`);
+        os.exec(`git commit -m "${quickgo.environ.m}"`);
     } else {
         os.exec(`git commit -m "QuickGo update"`);
     }
