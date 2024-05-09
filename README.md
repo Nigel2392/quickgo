@@ -309,7 +309,11 @@ context:
     CustomName: My Project
     Description: This is a project template for My Project.
 
-
+    # Version mapping for the command defined in commands/version.js
+    # Example: `quickgo exec version v=1.0.0`
+    versionMapping:
+      README.md: "\\@v((?:(\\d+)\\.)?(?:(\\d+)\\.)?(\\*|\\d+))"
+      
 # The left and right delimiters for the template engine.
 # These are used to replace the context variables in the project files.
 # Example: `{{ .Name }}` will be replaced with `my-project` in all files, if the leftDelim and rightDelim are set to `{{` and `}}`.
