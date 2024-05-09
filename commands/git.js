@@ -10,6 +10,7 @@ function main() {
         console.info(`Committing changes with message: '${quickgo.environ.m}'`);
         os.exec(`git commit -m "${quickgo.environ.m}"`);
     } else {
+        console.info(`Committing changes with default message: 'QuickGo update'`);
         os.exec(`git commit -m "QuickGo update"`);
     }
 
@@ -27,6 +28,8 @@ function main() {
         console.info(`Pushing tags to remote repository`);
         pushStr += ` --tags`;
     }
+    
+    console.info(`Executing git command: ${pushStr}`)
     os.exec(pushStr);
 
     return Result(0, `QuickGo git command executed successfully!`);
