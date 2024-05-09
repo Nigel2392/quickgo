@@ -281,6 +281,9 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 			},
 		}
 	)
+
+	vm.SetParserOptions()
+
 	cmd = js.NewScript(
 		"main",
 		js.WithVM(vm),
