@@ -1,8 +1,4 @@
 function main() {
-    if (!quickgo.environ.push) {
-        return Result(1, `QuickGo git command not provided in arguments: quickgo exec git push`);
-    }
-
     os.exec(`git add .`);
 
     //let tagName = quickgo.environ.tag;
@@ -21,6 +17,17 @@ function main() {
         console.info(`Tagging commit with tag ${quickgo.environ.tag}`);
         os.exec(`git tag ${quickgo.environ.tag}`);
     }
+
+    let pushStr = `git push`;
+    if (quickgo.environ.origin) {
+        console.info(`Pushing changes to remote repository`);
+        pushStr += ` -u origin ${quickgo.environ.origin}`;
+    }
+    if (quickgo.environ.tag) {
+        console.info(`Pushing tags to remote repository`);
+        pushStr += ` --tags`;
+    }
+    os.exec(pushStr);
 
     return Result(0, `QuickGo git command executed successfully!`);
 }
