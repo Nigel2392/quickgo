@@ -56,12 +56,6 @@ function main() {
         if (d.error) {
             // Try fallback method
             console.warn(`Could not determine default remote repository, trying fallback method ${d.stdout}`);
-            d = os.exec("basename $(git symbolic-ref --short refs/remotes/origin/HEAD)");
-        } 
-        if (d.error) {
-            // It's not nescessary to fail here, just warn the user
-            // Git *CAN* handle pushes without specifying the remote repository
-            console.warn(`Could not determine default remote repository, using 'master'.\nFallback Output: ${d.stdout}`);
         } else {
             pushStr += ` -u origin ${d.stdout.trim()}`;
         }
