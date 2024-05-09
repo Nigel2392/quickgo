@@ -57,7 +57,9 @@ function main() {
             // Try fallback method
             console.warn(`Could not determine default remote repository, trying fallback method ${d.stdout}`);
         } else {
-            pushStr += ` -u origin ${d.stdout.trim()}`;
+            let remote = d.stdout.trim();
+            remote = remote.replace("origin/", "");
+            pushStr += ` -u origin ${remote}`;
         }
     }
     if (quickgo.environ.tag) {
