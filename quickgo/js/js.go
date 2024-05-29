@@ -92,6 +92,13 @@ func (s *Command) AddFunc(f ...VMFunc) {
 	s._Funcs = append(s._Funcs, f...)
 }
 
+func newResult(importance int, message string) *CommandResult {
+	return &CommandResult{
+		Importance: importance,
+		Message:    message,
+	}
+}
+
 func (s *Command) Run(scriptSource string) (result *CommandResult, err error) {
 
 	var vm *goja.Runtime
@@ -106,9 +113,16 @@ func (s *Command) Run(scriptSource string) (result *CommandResult, err error) {
 	)
 
 	vm.Set("base64", Base64())
-	vm.Set("Result", func(importance int, message string) *CommandResult {
-		return &CommandResult{
-			Importance: importance,
+	vm.Set("Result", newResult)
+	vm.Set("Success", func(message string) *CommandResult {
+		return newResult(0, message)
+	})
+	vm.Set("Fail", func(message string) *CommandResult {
+		return newResult(1, message)
+	})
+	vm.Set("GoError", func(message string) error {
+		return &CommandError{
+			Importance: 1,
 			Message:    message,
 		}
 	})

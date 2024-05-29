@@ -2,6 +2,7 @@ package quickgo
 
 import (
 	"encoding/base64"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -16,6 +17,16 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/pkg/errors"
 )
+
+type flagSet struct {
+	*flag.FlagSet
+	args []string
+}
+
+func (f *flagSet) Parse() error {
+	logger.Debugf("Parsing flags: %v", f.args)
+	return f.FlagSet.Parse(f.args)
+}
 
 func (a *App) ListJSFiles() ([]string, error) {
 	var (
@@ -88,7 +99,7 @@ func (a *App) SaveJS(path string) error {
 	return nil
 }
 
-func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (err error) {
+func (a *App) ExecJS(targetDir string, scriptName string, rawArgs []string, args map[string]any) (err error) {
 	var (
 		scriptPath = GetQuickGoPath(
 			config.COMMANDS_DIR,
@@ -219,7 +230,7 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 			},
 		}
 		osModule = map[string]any{
-			"args": os.Args,
+			"args": rawArgs,
 			"getEnv": func(key string) string {
 				return os.Getenv(key)
 			},
@@ -296,7 +307,13 @@ func (a *App) ExecJS(targetDir string, scriptName string, args map[string]any) (
 		}
 	)
 
-	vm.SetParserOptions()
+	vm.Set("flag", &flagSet{
+		FlagSet: flag.NewFlagSet(
+			scriptName,
+			flag.ExitOnError,
+		),
+		args: rawArgs,
+	})
 
 	cmd = js.NewScript(
 		"main",

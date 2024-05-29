@@ -7,36 +7,47 @@ function main() {
     // The 'versionMapping' property must be an object with file paths as keys and regex strings as values.
     // The regex strings must have a capture group to match the current version.
     // The script will update the version in the files using the regex strings.
+
     
     if (!quickgo.environ.v) {
-        return Result(1, `QuickGo version not provided in arguments: v=<version>`);
+        return Fail(`QuickGo version not provided in arguments: v=<version>`);
     }
 
     if (!quickgo.project) {
-        return Result(1, `This script must be run in a QuickGo project, or the directory for the project must be specified!`);
+        return Fail(`This script must be run in a QuickGo project, or the directory for the project must be specified!`);
     }
 
     if (!quickgo.project.context.versionMapping) {
-        return Result(1, `QuickGo version mapping not provided in '${fs.joinPath(quickgo.projectPath, 'quickgo.yaml')}' project.context`);
+        return Fail(`QuickGo version mapping not provided in '${fs.joinPath(quickgo.projectPath, 'quickgo.yaml')}' project.context`);
     }
 
     let version = quickgo.environ.v;
     let versionMapping = quickgo.project.context.versionMapping;
+
+    // Mapping of file paths to regex strings to match and replace the current version.
     const files = Object.keys(versionMapping);
     for (let i = 0; i < files.length; i++) {
         let file = files[i];
         let regex = versionMapping[file];
+        let compiled = new RegExp(regex, 'g');
+
+        // Read the file content.
         let content = fs.readTextFile(file);
-        let match = content.match(regex);
+
+        // Check if there is a match for the version in the file.
+        let match = compiled.exec(content);
         if (!match) {
-            return Result(1, `Version ${version} not found in file ${file} using regex '${regex}'`);
+            return Fail(`Version ${version} not found in file ${file} using regex '${regex}'`);
         }
 
+        // Replace the old version with the new version.
         let oldVersion = match[1];
         console.debug(`Updating version in file ${file} from ${oldVersion} to ${version}`);
         content = content.replace(oldVersion, version);
+
+        // Write the updated content back to the file.
         fs.writeFile(file, content);
     }    
 
-    return Result(0, `Updated project '${quickgo.project.name}' to version ${version}`);
+    return Success(`Updated project '${quickgo.project.name}' to version ${version}`);
 }

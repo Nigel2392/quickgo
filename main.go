@@ -487,7 +487,7 @@ func main() {
 			}
 
 			err = qg.ExecJS(
-				flagger.TargetDir, fn, ctx,
+				flagger.TargetDir, fn, args[2:], ctx,
 			)
 			if err != nil && !errors.Is(err, js.ErrExitCode) {
 				logger.Fatal(1, fmt.Errorf("failed to execute command: %w", err))
